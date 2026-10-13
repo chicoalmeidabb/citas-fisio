@@ -38,7 +38,8 @@ button{cursor:pointer}
 .sign-panel svg{height:46%;width:auto;display:block}
 .sign-panel .word{font-family:'Quicksand','Nunito',sans-serif;font-weight:600;font-size:clamp(34px,10.5vw,64px);letter-spacing:-.02em;line-height:1}
 .sign-name{margin-top:clamp(14px,4vw,26px);font-family:'Nunito',sans-serif;font-weight:800;color:var(--blue);font-size:clamp(17px,4.6vw,26px);line-height:1.5;letter-spacing:.01em}
-.sign-hint{margin-top:22px;color:var(--mut);font-size:13px}
+.sign-hint{margin-top:22px;color:var(--mut);font-size:13px;line-height:1.7}
+.ver{font-size:12px;color:var(--mut);font-weight:700}
 
 /* ---------- Cabecera y navegación ---------- */
 header.top{position:sticky;top:0;z-index:20;background:var(--blue);color:#fff;display:flex;align-items:center;gap:12px;padding:10px 14px;padding-top:calc(10px + env(safe-area-inset-top))}
@@ -221,7 +222,7 @@ dialog footer .sp{flex:1}
       <div class="word">fisioterapeuta</div>
     </div>
     <div class="sign-name">Carlos Tomás Ortiz Sánchez<br>Colegiado Nº 197</div>
-    <div class="sign-hint">Toca para entrar</div>
+    <div class="sign-hint">Toca para entrar<br><span class="ver"></span></div>
   </div>
 </div>
 
@@ -239,6 +240,7 @@ dialog footer .sp{flex:1}
       <button class="btn" data-act="cfg-demo">Probar en modo demo</button>
     </div>
     <p style="margin-top:14px;font-size:13px">El modo demo guarda los datos solo en este dispositivo, sin usar la hoja.</p>
+    <p class="ver" style="margin:0"></p>
   </div>
 </div>
 
@@ -272,6 +274,7 @@ dialog footer .sp{flex:1}
 /* =====================================================================
    Datos y utilidades
    ===================================================================== */
+const APP_VERSION='1.3', APP_BUILD='13/10/2026 15:22';
 const SESIONES=[{ini:9*60,fin:14*60},{ini:17*60,fin:21*60}];
 const PASO=15, CABINAS=['1','2','3'], MIN_DIA=3*((14-9)+(21-17))*60;
 const ESTADOS={pendiente:'Pendiente',realizada:'Realizada',ausente:'No acudió',cancelada:'Cancelada'};
@@ -298,6 +301,7 @@ const today=()=>wkday(ymd(new Date()));
 
 const S={pacientes:[],tratamientos:[],citas:[],fecha:today(),vista:'agenda',modo:null,
          inf:{per:'semana',desde:'',hasta:''}};
+document.querySelectorAll('.ver').forEach(e=>e.textContent='Versión '+APP_VERSION+' · '+APP_BUILD);
 let CFG=JSON.parse(localStorage.getItem('cfx_cfg')||'null');
 
 const pac=id=>S.pacientes.find(p=>p.id===id);
@@ -644,7 +648,7 @@ function openTratamiento(t={}){
 /* ---------- Ajustes ---------- */
 function openAjustes(){
   abre(`<div class="dlg">${head('Ajustes')}
-    <dl class="kv"><dt>Modo</dt><dd>${S.modo==='demo'?'Demo (datos solo en este dispositivo)':'Conectado a la hoja de Google'}</dd>
+    <dl class="kv"><dt>Versión</dt><dd>${APP_VERSION} · ${APP_BUILD}</dd><dt>Modo</dt><dd>${S.modo==='demo'?'Demo (datos solo en este dispositivo)':'Conectado a la hoja de Google'}</dd>
     ${S.modo==='sheet'?`<dt>Conexión</dt><dd style="font-size:12px">${esc(CFG.url.slice(0,48))}…</dd>`:''}</dl>
     <div class="row" style="flex-wrap:wrap">
       <button class="btn" data-act="recargar">↻ Recargar datos</button>
