@@ -316,7 +316,7 @@ tr.clk{cursor:pointer}tr.clk:hover{background:var(--blue-l)}
 /* =====================================================================
    Datos y utilidades
    ===================================================================== */
-const APP_VERSION='2.0', APP_BUILD='14/10/2026 15:35';
+const APP_VERSION='2.1', APP_BUILD='14/10/2026 17:05';
 const SESIONES=[{ini:9*60,fin:14*60},{ini:17*60,fin:21*60}];
 const PASO=15, CABINAS=['1','2','3'], MIN_DIA=3*((14-9)+(21-17))*60;
 const ESTADOS={pendiente:'Pendiente',realizada:'Realizada',ausente:'No acudió',cancelada:'Cancelada'};
@@ -834,7 +834,7 @@ function openCita(c={}){
       <h4>Cobro y cierre del tratamiento</h4>
       <div class="grid2"><label>Importe de la sesión (€)<input name="importe" id="cImp" type="number" min="0" step="0.01" inputmode="decimal" value="${esc(c.importe??'')}" placeholder="0,00"></label>
         <label>¿Pagada?<select name="pagada" id="cPag"><option value="0">No</option><option value="1"${c.pagada==='1'?' selected':''}>Sí, pagada</option></select></label></div>
-      <label>¿Ha terminado el tratamiento?<select name="terminado" id="cTer"><option value="0">No, continúa (se da otra cita)</option><option value="1"${c.terminado==='1'?' selected':''}>Sí, terminado (se factura)</option></select></label>
+      <label>¿Ha terminado el tratamiento?<select name="terminado" id="cTer"><option value="0">Continúa, será otra cita</option><option value="1"${c.terminado==='1'?' selected':''}>Sí, terminado (se factura)</option></select></label>
       <div class="resumen" id="cRes"></div>
     </div>
     <label>Observaciones<textarea name="observaciones" rows="3">${esc(c.observaciones||'')}</textarea></label>
@@ -864,8 +864,13 @@ function openCita(c={}){
     S.fecha=wkday(rec.fecha);
     await guardar('Citas',rec);toast('Cita guardada');
     const eraReal=old&&old.estado==='realizada', eraTer=old&&old.terminado==='1';
-    if(rec.estado==='realizada'&&(!eraReal||(rec.terminado==='1')!==eraTer)){
-      setTimeout(()=>rec.terminado==='1'?avisoTerminado(rec):avisoContinua(rec),0);return false;
+    if(rec.estado==='realizada'){
+      if(rec.terminado==='1'){
+        if(!eraReal||!eraTer){setTimeout(()=>avisoTerminado(rec),0);return false}
+      }else{
+        const hayProxima=S.citas.some(z=>z.id!==rec.id&&epId(z)===rec.episodioId&&z.estado==='pendiente'&&(z.fecha>rec.fecha||(z.fecha===rec.fecha&&z.hora>rec.hora)));
+        if(!hayProxima){setTimeout(()=>{openCita(copiaSiguiente(rec));toast('Elige el día y la hora de la siguiente cita')},0);return false}
+      }
     }
   });
   const g=gid, ajustaDur=()=>{const o=g('cTra').selectedOptions[0];if(o&&o.dataset.d)g('cDur').value=o.dataset.d};
