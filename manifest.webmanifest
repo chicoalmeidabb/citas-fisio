@@ -2,7 +2,7 @@
   "name": "Centro de Fisioterapia · Carlos Ortiz",
   "short_name": "Fisioterapia",
   "description": "Gestión de citas, pacientes y tratamientos del Centro de Fisioterapia de Carlos Ortiz.",
-  "id": "./",
+  "id": "./?app=v2",
   "start_url": "./",
   "scope": "./",
   "display": "standalone",
