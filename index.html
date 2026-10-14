@@ -115,7 +115,9 @@ input:focus,select:focus,textarea:focus{outline:2px solid var(--blue);outline-of
 .cita.realizada{background:#d7f1e3;border-color:var(--ok);color:#0f5c39}
 .cita.ausente{background:#ffeccb;border-color:var(--warn);color:#7a4c00}
 .cita:hover{filter:brightness(.97)}
-.cita.corta{padding:1px 6px;display:flex;align-items:center}
+.cita{line-height:1.15!important;font-size:11.5px!important;padding:2px 6px!important}
+.cita span i{font-style:italic}
+.cita.corta{padding:1px 6px!important;display:flex;align-items:center}
 .cita.corta b{font-size:12px}
 .seg{display:inline-flex;border:1px solid var(--line);border-radius:10px;overflow:hidden;background:#fff}
 .seg button{border:0;background:#fff;padding:8px 14px;font-weight:700;color:var(--mut)}
@@ -129,6 +131,7 @@ input:focus,select:focus,textarea:focus{outline:2px solid var(--blue);outline-of
 .ai .m{min-width:0;flex:1}
 .ai .m b{display:block;font-size:16px;overflow-wrap:anywhere}
 .ai .m span{display:block;font-size:13.5px;color:var(--mut)}
+.ai .m span.mot{font-style:italic;white-space:normal;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
 .ai .cb{flex:none;font-size:12px;font-weight:800;background:var(--blue-l);color:var(--blue-d);border-radius:8px;padding:4px 8px;white-space:nowrap}
 .legend{display:flex;gap:12px;flex-wrap:wrap;font-size:12px;color:var(--mut);margin-top:10px}
 .legend i{display:inline-block;width:10px;height:10px;border-radius:3px;margin-right:5px;vertical-align:-1px}
@@ -316,7 +319,7 @@ tr.clk{cursor:pointer}tr.clk:hover{background:var(--blue-l)}
 /* =====================================================================
    Datos y utilidades
    ===================================================================== */
-const APP_VERSION='2.1', APP_BUILD='14/10/2026 17:05';
+const APP_VERSION='2.3', APP_BUILD='14/10/2026 17:18';
 const SESIONES=[{ini:9*60,fin:14*60},{ini:17*60,fin:21*60}];
 const PASO=15, CABINAS=['1','2','3'], MIN_DIA=3*((14-9)+(21-17))*60;
 const ESTADOS={pendiente:'Pendiente',realizada:'Realizada',ausente:'No acudió',cancelada:'Cancelada'};
@@ -439,6 +442,15 @@ const api={
 };
 const TABLAS={Pacientes:'pacientes',Tratamientos:'tratamientos',Lesiones:'lesiones',Citas:'citas',Gastos:'gastos',Facturas:'facturas'};
 
+/* Cola de escritura en segundo plano: la pantalla responde al instante y los cambios se envían a la hoja uno tras otro. */
+let colaEnvio=Promise.resolve(), pendientes=0;
+function pillEstado(){const p=$('#modePill');if(p)p.textContent=S.modo==='demo'?'Demo':(pendientes>0?'Guardando…':'Conectado')}
+function enviar(fn){
+  pendientes++;pillEstado();
+  colaEnvio=colaEnvio.then(fn).catch(async e=>{toast(e.message,true);await recargar(true)}).finally(()=>{pendientes--;pillEstado()});
+  return colaEnvio;
+}
+addEventListener('beforeunload',e=>{if(pendientes>0){e.preventDefault();e.returnValue=''}});
 async function guardar(tabla,rec){
   const k=TABLAS[tabla];
   if(!rec.id)rec.id=uid();
@@ -446,24 +458,21 @@ async function guardar(tabla,rec){
   const i=S[k].findIndex(x=>x.id===rec.id);
   if(i<0)S[k].push(rec);else S[k][i]=rec;
   render();
-  try{
-    if(S.modo==='demo')persistDemo();
-    else await api.post({accion:'guardar',tabla,registro:rec});
-    return true;
-  }catch(e){toast(e.message,true);await recargar(true);return false}
+  if(S.modo==='demo'){persistDemo();return true}
+  const copia={...rec};
+  enviar(()=>api.post({accion:'guardar',tabla,registro:copia}));
+  return true;
 }
 async function borrar(tabla,id,extra=[]){
   const k=TABLAS[tabla];
   S[k]=S[k].filter(x=>x.id!==id);
   if(tabla==='Pacientes')S.citas=S.citas.filter(c=>c.pacienteId!==id);
   render();
-  try{
-    if(S.modo==='demo')persistDemo();
-    else{
-      await api.post({accion:'borrar',tabla,id});
-      for(const cid of extra)await api.post({accion:'borrar',tabla:'Citas',id:cid});
-    }
-  }catch(e){toast(e.message,true);await recargar(true)}
+  if(S.modo==='demo'){persistDemo();return}
+  enviar(async()=>{
+    await api.post({accion:'borrar',tabla,id});
+    for(const cid of extra)await api.post({accion:'borrar',tabla:'Citas',id:cid});
+  });
 }
 async function guardarConfig(obj){
   Object.assign(S.config,obj);
@@ -534,7 +543,7 @@ const txtRango=(d,h)=>d==='0000-01-01'?'Todo el histórico':`${fmtShort(d)} – 
    ===================================================================== */
 function render(){
   document.querySelectorAll('#tabs button').forEach(b=>b.classList.toggle('on',b.dataset.v===S.vista));
-  $('#modePill').textContent=S.modo==='demo'?'Demo':'Conectado';
+  pillEstado();
   const v=$('#view');
   v.innerHTML={agenda:vAgenda,pacientes:vPacientes,tratamientos:vTratamientos,cuentas:vCuentas,informes:vInformes}[S.vista]();
   if(S.vista==='pacientes'){const q=$('#q');if(q)q.oninput=()=>pintaPacientes()}
@@ -565,8 +574,14 @@ function vAgenda(){
   del.forEach(c=>{
     const a=toMin(c.hora),b=a+Number(c.duracion),p=pac(c.pacienteId),t=tra(c.tratamientoId);
     const nom=p?p.nombre:'(paciente no encontrado)', corta=Number(c.duracion)<30;
-    g+=`<button class="cita ${c.estado}${corta?' corta':''}" style="grid-row:${rowOf(a)}/${rowOf(b,true)};grid-column:${Number(c.cabina)+1}" data-act="cita" data-id="${c.id}" title="${esc(nom)} · ${hm(a)}–${hm(b)} · ${esc(t?t.nombre:'')}">
-      ${corta?`<b>${hm(a)} ${esc(nom)}</b>`:`<b>${esc(nom)}</b><span>${hm(a)}–${hm(b)} · ${esc(t?t.nombre:'')}</span>`}</button>`;
+    const les=lesNombre(c.lesionId), mot=(c.motivo||'').trim();
+    const alto=Number(c.duracion)/PASO*22, n=Math.max(1,Math.min(4,Math.floor((alto-4)/13.2)));
+    const lineas=[`<b>${esc(nom)}</b>`,`<span>${hm(a)}–${hm(b)} · ${esc(t?t.nombre:'Sin tratamiento')}</span>`];
+    if(les)lineas.push(`<span>${esc(les)}</span>`);
+    if(mot)lineas.push(`<span><i>${esc(mot)}</i></span>`);
+    if(n===3&&mot)lineas.splice(2,2,`<span>${esc([les,mot].filter(Boolean).join(' · '))}</span>`);
+    const cuerpo=n===1?`<b>${hm(a)} ${esc(nom)}</b>`:lineas.slice(0,n).join('');
+    g+=`<button class="cita ${c.estado}${n===1?' corta':''}" style="grid-row:${rowOf(a)}/${rowOf(b,true)};grid-column:${Number(c.cabina)+1}" data-act="cita" data-id="${c.id}" title="${esc([nom,hm(a)+'–'+hm(b),t?t.nombre:'',les,mot].filter(Boolean).join(' · '))}">${cuerpo}</button>`;
   });
   const vista=S.vistaAg||localStorage.getItem('cfx_vistaAg')||(innerWidth<=640?'lista':'cabinas');
   const delTodas=S.citas.filter(c=>c.fecha===f).sort((a,b)=>toMin(a.hora)-toMin(b.hora)||String(a.cabina).localeCompare(String(b.cabina)));
@@ -574,7 +589,7 @@ function vAgenda(){
     const a=toMin(c.hora),b=a+Number(c.duracion),p=pac(c.pacienteId),t=tra(c.tratamientoId),l=lesNombre(c.lesionId);
     return `<button class="ai ${c.estado}" data-act="cita" data-id="${c.id}">
       <div class="tm">${hm(a)}<small>a ${hm(b)}</small></div>
-      <div class="m"><b>${esc(p?p.nombre:'(paciente no encontrado)')}</b><span>${esc(t?t.nombre:'Sin tratamiento')}${l?' · '+esc(l):''} · Sesión ${sesionN(c)}</span></div>
+      <div class="m"><b>${esc(p?p.nombre:'(paciente no encontrado)')}</b><span>${esc(t?t.nombre:'Sin tratamiento')}${l?' · '+esc(l):''} · Sesión ${sesionN(c)}</span>${(c.motivo||'').trim()?`<span class="mot">Motivo: ${esc(c.motivo.trim())}</span>`:''}</div>
       <div class="rt"><span class="cb">Cabina ${esc(c.cabina)}</span>${c.estado==='pendiente'?'':`<span class="tag ${c.estado}">${ESTADOS[c.estado]}</span>`}${etiquetasPago(c)}</div></button>`}).join('')}</div>`
     :`<div class="card empty">No hay citas este día.<br><button class="btn primary" data-act="nueva-cita">＋ Nueva cita</button></div>`;
   return `
