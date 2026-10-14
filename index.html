@@ -116,7 +116,9 @@ input:focus,select:focus,textarea:focus{outline:2px solid var(--blue);outline-of
 .cita.ausente{background:#ffeccb;border-color:var(--warn);color:#7a4c00}
 .cita:hover{filter:brightness(.97)}
 .cita{line-height:1.15!important;font-size:11.5px!important;padding:2px 6px!important}
-.cita span i{font-style:italic}
+.cita .l1{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.cita .l1 b{display:inline!important;font-size:12px}
+.cita i{font-style:italic;opacity:.9}
 .cita.corta{padding:1px 6px!important;display:flex;align-items:center}
 .cita.corta b{font-size:12px}
 .seg{display:inline-flex;border:1px solid var(--line);border-radius:10px;overflow:hidden;background:#fff}
@@ -319,7 +321,7 @@ tr.clk{cursor:pointer}tr.clk:hover{background:var(--blue-l)}
 /* =====================================================================
    Datos y utilidades
    ===================================================================== */
-const APP_VERSION='2.3', APP_BUILD='14/10/2026 17:18';
+const APP_VERSION='2.4', APP_BUILD='14/10/2026 17:28';
 const SESIONES=[{ini:9*60,fin:14*60},{ini:17*60,fin:21*60}];
 const PASO=15, CABINAS=['1','2','3'], MIN_DIA=3*((14-9)+(21-17))*60;
 const ESTADOS={pendiente:'Pendiente',realizada:'Realizada',ausente:'No acudió',cancelada:'Cancelada'};
@@ -576,12 +578,13 @@ function vAgenda(){
     const nom=p?p.nombre:'(paciente no encontrado)', corta=Number(c.duracion)<30;
     const les=lesNombre(c.lesionId), mot=(c.motivo||'').trim();
     const alto=Number(c.duracion)/PASO*22, n=Math.max(1,Math.min(4,Math.floor((alto-4)/13.2)));
-    const lineas=[`<b>${esc(nom)}</b>`,`<span>${hm(a)}–${hm(b)} · ${esc(t?t.nombre:'Sin tratamiento')}</span>`];
-    if(les)lineas.push(`<span>${esc(les)}</span>`);
-    if(mot)lineas.push(`<span><i>${esc(mot)}</i></span>`);
-    if(n===3&&mot)lineas.splice(2,2,`<span>${esc([les,mot].filter(Boolean).join(' · '))}</span>`);
-    const cuerpo=n===1?`<b>${hm(a)} ${esc(nom)}</b>`:lineas.slice(0,n).join('');
-    g+=`<button class="cita ${c.estado}${n===1?' corta':''}" style="grid-row:${rowOf(a)}/${rowOf(b,true)};grid-column:${Number(c.cabina)+1}" data-act="cita" data-id="${c.id}" title="${esc([nom,hm(a)+'–'+hm(b),t?t.nombre:'',les,mot].filter(Boolean).join(' · '))}">${cuerpo}</button>`;
+    const cab=`<b>${esc(nom)}</b>${mot?` <i>· ${esc(mot)}</i>`:''}`;
+    const dato=[les,t?t.nombre:''].filter(Boolean).join(' · ')||'Sin tratamiento';
+    const horas=`${hm(a)}–${hm(b)}`;
+    const cuerpo=n===1?`<b>${hm(a)} ${esc(nom)}</b>`
+      :n===2?`<span class="l1">${cab}</span><span>${horas} · ${esc(dato)}</span>`
+      :`<span class="l1">${cab}</span><span>${horas}</span><span>${esc(dato)}</span>`;
+    g+=`<button class="cita ${c.estado}${n===1?' corta':''}" style="grid-row:${rowOf(a)}/${rowOf(b,true)};grid-column:${Number(c.cabina)+1}" data-act="cita" data-id="${c.id}" title="${esc([nom,mot&&('Motivo: '+mot),horas,les,t?t.nombre:''].filter(Boolean).join(' · '))}">${cuerpo}</button>`;
   });
   const vista=S.vistaAg||localStorage.getItem('cfx_vistaAg')||(innerWidth<=640?'lista':'cabinas');
   const delTodas=S.citas.filter(c=>c.fecha===f).sort((a,b)=>toMin(a.hora)-toMin(b.hora)||String(a.cabina).localeCompare(String(b.cabina)));
@@ -589,7 +592,7 @@ function vAgenda(){
     const a=toMin(c.hora),b=a+Number(c.duracion),p=pac(c.pacienteId),t=tra(c.tratamientoId),l=lesNombre(c.lesionId);
     return `<button class="ai ${c.estado}" data-act="cita" data-id="${c.id}">
       <div class="tm">${hm(a)}<small>a ${hm(b)}</small></div>
-      <div class="m"><b>${esc(p?p.nombre:'(paciente no encontrado)')}</b><span>${esc(t?t.nombre:'Sin tratamiento')}${l?' · '+esc(l):''} · Sesión ${sesionN(c)}</span>${(c.motivo||'').trim()?`<span class="mot">Motivo: ${esc(c.motivo.trim())}</span>`:''}</div>
+      <div class="m"><b>${esc(p?p.nombre:'(paciente no encontrado)')}</b>${(c.motivo||'').trim()?`<span class="mot">${esc(c.motivo.trim())}</span>`:''}<span>${l?esc(l)+' · ':''}${esc(t?t.nombre:'Sin tratamiento')} · Sesión ${sesionN(c)}</span></div>
       <div class="rt"><span class="cb">Cabina ${esc(c.cabina)}</span>${c.estado==='pendiente'?'':`<span class="tag ${c.estado}">${ESTADOS[c.estado]}</span>`}${etiquetasPago(c)}</div></button>`}).join('')}</div>`
     :`<div class="card empty">No hay citas este día.<br><button class="btn primary" data-act="nueva-cita">＋ Nueva cita</button></div>`;
   return `
@@ -839,7 +842,7 @@ function openCita(c={}){
     <label>Motivo de la consulta <span style="font-weight:600">(lo que cuenta el paciente)</span><textarea name="motivo" id="cMot" rows="2" placeholder="Ej.: me duele la espalda al agacharme desde hace una semana">${esc(c.motivo||'')}</textarea></label>
     <label>Lesión<div class="row"><select name="lesionId" id="cLes"><option value="">— Sin especificar —</option>${les.map(l=>`<option value="${l.id}"${l.id===c.lesionId?' selected':''}>${esc(l.nombre)}</option>`).join('')}</select>
       <button type="button" class="btn" data-act="cita-nueva-les">＋ Nueva</button></div></label>
-    <label>Tratamiento<select name="tratamientoId" id="cTra"><option value="">— Sin tratamiento —</option>${S.tratamientos.map(t=>`<option value="${t.id}" data-d="${t.duracion}" data-p="${esc(t.precio||'')}"${t.id===c.tratamientoId?' selected':''}>${esc(t.nombre)} (${t.duracion} min)</option>`).join('')}</select></label>
+    <label>Tratamiento<select name="tratamientoId" id="cTra"><option value="">— Sin tratamiento —</option>${S.tratamientos.map(t=>`<option value="${t.id}" data-d="${t.duracion}" data-p="${esc(t.precio||'')}"${t.id===c.tratamientoId?' selected':''}>${esc(t.nombre)} · ${t.duracion} min${num(t.precio)>0?' · '+eur(t.precio):''}</option>`).join('')}</select></label>
     <div class="grid2"><label>Fecha<input type="date" name="fecha" required value="${esc(c.fecha||S.fecha)}"></label>
       <label>Hora<select name="hora">${opcionesHora(c.hora||'09:00')}</select></label></div>
     <div class="grid2"><label>Cabina<select name="cabina">${CABINAS.map(x=>`<option value="${x}"${String(c.cabina||'1')===x?' selected':''}>Cabina ${x}</option>`).join('')}</select></label>
@@ -990,7 +993,7 @@ function openTratamiento(t={}){
     <input type="hidden" name="id" value="${esc(t.id||'')}">
     <label>Nombre<input name="nombre" required value="${esc(t.nombre||'')}"></label>
     <div class="grid2"><label>Duración habitual<select name="duracion">${[15,30,45,60,75,90].map(x=>`<option value="${x}"${x===(Number(t.duracion)||30)?' selected':''}>${x} min</option>`).join('')}</select></label>
-      <label>Precio por sesión (€)<input name="precio" type="number" min="0" step="0.01" inputmode="decimal" value="${esc(t.precio||'')}" placeholder="Opcional"></label></div>
+      <label>Precio de la sesión (€)<input name="precio" type="number" min="0" step="0.01" inputmode="decimal" required value="${esc(t.precio||'')}" placeholder="Ej.: 40"></label></div>
     <label>Observaciones<textarea name="observaciones" rows="4">${esc(t.observaciones||'')}</textarea></label>
     <footer>${edit?`<button type="button" class="btn danger" data-act="tra-del" data-id="${t.id}">Eliminar</button>`:''}<span class="sp"></span><button type="button" class="btn" data-act="close">Cancelar</button><button class="btn primary">Guardar</button></footer></form>`,
   async fd=>{
