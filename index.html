@@ -252,6 +252,12 @@ tr.clk{cursor:pointer}tr.clk:hover{background:var(--blue-l)}
 .gl:hover{background:#e0f5ea;border-color:var(--ok)}
 .gl.lleno{border:0;background:#f3f4f7;color:var(--mut);display:block;font-weight:600}
 
+
+.gt.ha{background:#dbe8fb;color:#1d5fb5}.gt.hb{background:#fde9c4;color:#8a5a00}
+.gc.ha{background:#f0f6ff}.gc.hb{background:#fff8ea}
+.gc.hoy{background-image:linear-gradient(rgba(41,122,222,.10),rgba(41,122,222,.10))!important}
+.gt{border-top:1px solid #fff!important;display:flex;align-items:flex-start;justify-content:flex-end;font-size:12.5px!important;font-weight:800!important}
+.gc.ha,.gc.hb{border-top:1px solid #fff}
 .gc{gap:2px!important;padding:3px!important}
 .ln{display:flex;align-items:center;gap:4px;min-height:22px;min-width:0}
 .cn{flex:none;width:15px;height:15px;border-radius:50%;background:#e9eef7;color:var(--mut);font-size:10px;font-weight:800;display:grid;place-items:center}
@@ -396,7 +402,7 @@ tr.clk{cursor:pointer}tr.clk:hover{background:var(--blue-l)}
 /* =====================================================================
    Datos y utilidades
    ===================================================================== */
-const APP_VERSION='2.7', APP_BUILD='15/10/2026 08:26';
+const APP_VERSION='2.8', APP_BUILD='15/10/2026 08:33';
 const SESIONES=[{ini:9*60,fin:14*60},{ini:17*60,fin:21*60}];
 const PASO=15, CABINAS=['1','2','3'], MIN_DIA=3*((14-9)+(21-17))*60;
 const ESTADOS={pendiente:'Pendiente',realizada:'Realizada',ausente:'No acudió',cancelada:'Cancelada'};
@@ -677,10 +683,11 @@ function gridSemana(dias,hoy){
   let g='<div class="gh0"></div>'+dias.map(x=>`<button class="gh${x===hoy?' hoy':''}" data-act="ir-dia" data-f="${x}"><b>${esc(mayus(parseD(x).toLocaleDateString('es-ES',{weekday:'short'}).replace('.','')))}</b> <span>${parseD(x).getDate()}</span></button>`).join('');
   HORAS_AG.forEach(h=>{
     if(h===17)g+=`<div class="gb">Cerrado de 14:00 a 17:00</div>`;
-    g+=`<div class="gt">${h}:00</div>`;
+    const tono=h%2?'ha':'hb';
+    g+=`<div class="gt ${tono}">${h}:00</div>`;
     dias.forEach(x=>{
       const libres=libresHora(x,h), vacia=!S.citas.some(c=>c.fecha===x&&activas(c)&&toMin(c.hora)<h*60+60&&toMin(c.hora)+Number(c.duracion)>h*60);
-      g+=`<div class="gc${x===hoy?' hoy':''}">${vacia?`<button class="gl todo" data-act="hueco" data-f="${x}" data-m="${h*60}" data-c="${libres[0]}" aria-label="Nueva cita ${h}:00">＋ Libre · ${CABINAS.length} cabinas</button>`:CABINAS.map(c=>carril(x,h,c)).join('')}</div>`});
+      g+=`<div class="gc ${tono}${x===hoy?' hoy':''}">${vacia?`<button class="gl todo" data-act="hueco" data-f="${x}" data-m="${h*60}" data-c="${libres[0]}" aria-label="Nueva cita ${h}:00">＋ Libre · ${CABINAS.length} cabinas</button>`:CABINAS.map(c=>carril(x,h,c)).join('')}</div>`});
   });
   return `<div class="semg">${g}</div>`;
 }
