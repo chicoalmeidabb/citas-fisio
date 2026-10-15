@@ -258,6 +258,18 @@ tr.clk{cursor:pointer}tr.clk:hover{background:var(--blue-l)}
 .gc.hoy{background-image:linear-gradient(rgba(41,122,222,.10),rgba(41,122,222,.10))!important}
 .gt{border-top:1px solid #fff!important;display:flex;align-items:flex-start;justify-content:flex-end;font-size:12.5px!important;font-weight:800!important}
 .gc.ha,.gc.hb{border-top:1px solid #fff}
+
+/* colores por franja horaria: huecos y citas */
+.gc.ha .gl{background:#dbe8fb;border-color:#8db4ea;color:#1d5fb5}
+.gc.ha .gl:hover{background:#c7dcf9;border-color:#4f8fdf}
+.gc.hb .gl{background:#fde9c4;border-color:#e3b560;color:#8a5a00}
+.gc.hb .gl:hover{background:#fbdca3;border-color:#d99a22}
+.gc.ha .lk{background:#bcd3f5;color:#0c3468}
+.gc.hb .lk{background:#f7d58e;color:#6b4300}
+.gc.ha .lk:hover,.gc.hb .lk:hover{filter:brightness(.95)}
+.sdf button.ha{background:#dbe8fb;border-color:#8db4ea;color:#1d5fb5}
+.sdf button.hb{background:#fde9c4;border-color:#e3b560;color:#8a5a00}
+.leyc{display:inline-block;width:4px;height:12px;border-radius:2px;margin-right:5px;vertical-align:-2px}
 .gc{gap:2px!important;padding:3px!important}
 .ln{display:flex;align-items:center;gap:4px;min-height:22px;min-width:0}
 .cn{flex:none;width:15px;height:15px;border-radius:50%;background:#e9eef7;color:var(--mut);font-size:10px;font-weight:800;display:grid;place-items:center}
@@ -402,7 +414,7 @@ tr.clk{cursor:pointer}tr.clk:hover{background:var(--blue-l)}
 /* =====================================================================
    Datos y utilidades
    ===================================================================== */
-const APP_VERSION='2.8', APP_BUILD='15/10/2026 08:33';
+const APP_VERSION='2.9', APP_BUILD='15/10/2026 08:50';
 const SESIONES=[{ini:9*60,fin:14*60},{ini:17*60,fin:21*60}];
 const PASO=15, CABINAS=['1','2','3'], MIN_DIA=3*((14-9)+(21-17))*60;
 const ESTADOS={pendiente:'Pendiente',realizada:'Realizada',ausente:'No acudió',cancelada:'Cancelada'};
@@ -675,7 +687,7 @@ function carril(f,h,cab){
   for(let m=ini;m<fin;m+=PASO){if(!cs.some(c=>toMin(c.hora)<m+PASO&&toMin(c.hora)+Number(c.duracion)>m)){libre=m;break}}
   const chips=cs.map(c=>{
     const p=pac(c.pacienteId),nom=p?p.nombre:'(paciente no encontrado)',mot=(c.motivo||'').trim(),h0=toMin(c.hora),cont=h0<ini;
-    return `<button class="lk ${c.estado}${cont?' cont':''}" data-act="cita" data-id="${c.id}" title="${esc(tituloCita(c))}">${cont?'':`<b>${hm(h0)}</b> `}${esc(nom)}${cont?` <em>· hasta ${hm(h0+Number(c.duracion))}</em>`:(mot?` <i>· ${esc(mot)}</i>`:'')}</button>`}).join('');
+    return `<button class="lk ${c.estado}${cont?' cont':''}" data-act="cita" data-id="${c.id}" title="${esc(tituloCita(c))}">${c.estado==='realizada'?'✓ ':c.estado==='ausente'?'✗ ':''}${cont?'':`<b>${hm(h0)}</b> `}${esc(nom)}${cont?` <em>· hasta ${hm(h0+Number(c.duracion))}</em>`:(mot?` <i>· ${esc(mot)}</i>`:'')}</button>`}).join('');
   const btn=libre===null?'':`<button class="gl" data-act="hueco" data-f="${f}" data-m="${libre}" data-c="${cab}" aria-label="Nueva cita ${hm(libre)} cabina ${cab}">${libre===ini&&!cs.length?'＋ libre':'＋ '+hm(libre)}</button>`;
   return `<div class="ln${libre===null?' llena':''}"><span class="cn">${cab}</span>${chips}${btn}</div>`;
 }
@@ -703,7 +715,7 @@ function vAgendaSemana(){
     return `<section class="sd${x===hoy?' hoy':''}"><button class="sdh" data-act="ir-dia" data-f="${x}" aria-label="Ver el día ${esc(fmtLong(x))}">
         <b>${esc(mayus(parseD(x).toLocaleDateString('es-ES',{weekday:'long'})))}</b><span>${parseD(x).getDate()} ${esc(parseD(x).toLocaleDateString('es-ES',{month:'short'}).replace('.',''))}</span>
         <i>${L.length?L.length+' cita'+(L.length>1?'s':'')+' · '+ocup+'%':'Sin citas'}</i></button>
-      <div class="sdf">${HORAS_AG.filter(h=>libresHora(x,h).length).map(h=>`<button data-act="hueco" data-f="${x}" data-m="${h*60}" data-c="${libresHora(x,h)[0]}">${h}:00${libresHora(x,h).length<CABINAS.length?' · '+libresHora(x,h).length+' libre'+(libresHora(x,h).length>1?'s':''):''}</button>`).join('')||'<span>Sin huecos</span>'}</div>
+      <div class="sdf">${HORAS_AG.filter(h=>libresHora(x,h).length).map(h=> `<button class="${h%2?'ha':'hb'}" data-act="hueco" data-f="${x}" data-m="${h*60}" data-c="${libresHora(x,h)[0]}">${h}:00${libresHora(x,h).length<CABINAS.length?' · '+libresHora(x,h).length+' libre'+(libresHora(x,h).length>1?'s':''):''}</button>`).join('')||'<span>Sin huecos</span>'}</div>
       <div class="sdl">${L.length?L.map(c=>{
         const p=pac(c.pacienteId),t=tra(c.tratamientoId),les=lesNombre(c.lesionId),mot=(c.motivo||'').trim(),h0=toMin(c.hora);
         return `<button class="sc ${c.estado}" data-act="cita" data-id="${c.id}"><div class="sc1"><b>${hm(h0)}</b><span class="nm">${esc(p?p.nombre:'(paciente no encontrado)')}</span><em>Cab. ${esc(c.cabina)}</em></div>${mot?`<div class="sc2">${esc(mot)}</div>`:''}<div class="sc3">${esc([les,t?t.nombre:''].filter(Boolean).join(' · ')||'Sin tratamiento')}</div></button>`}).join(''):'<div class="sdv">—</div>'}</div></section>`}).join('');
@@ -711,7 +723,7 @@ function vAgendaSemana(){
   <div class="muted" style="font-size:13px;margin:-4px 0 10px">${total} cita${total===1?'':'s'} esta semana · pulsa un día para verlo con las cabinas · en las horas con citas se ven las 3 cabinas: ＋ verde = cabina libre (con la hora desde la que queda libre)</div>
   ${gridSemana(dias,hoy)}
   <div class="sem">${cols}</div>
-  <div class="legend"><span><i style="background:#dcebfd;border-left:3px solid var(--blue)"></i>Pendiente</span><span><i style="background:#d7f1e3"></i>Realizada</span><span><i style="background:#ffeccb"></i>No acudió</span></div>`;
+  <div class="legend"><span><i class="leyc" style="background:var(--blue)"></i>Pendiente</span><span><i class="leyc" style="background:var(--ok)"></i>✓ Realizada</span><span><i class="leyc" style="background:var(--warn)"></i>✗ No acudió</span><span>El color de fondo indica la franja horaria; la barra de la izquierda, el estado</span></div>`;
 }
 function vAgendaMes(){
   const d=parseD(S.fecha), y=d.getFullYear(), m=d.getMonth(), hoy=ymd(new Date());
