@@ -235,6 +235,28 @@ tr.clk{cursor:pointer}tr.clk:hover{background:var(--blue-l)}
 .sc1 em{flex:none;font-style:normal;font-size:11px;opacity:.75}
 .sc2{font-style:italic;opacity:.9;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .sc3{opacity:.85;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+
+.semg{display:grid;grid-template-columns:48px repeat(5,minmax(0,1fr));background:#fff;border:1px solid var(--line);border-radius:12px;overflow:hidden}
+.sem{display:none}
+.gh0{background:var(--blue-l)}
+.gh{border:0;border-left:1px solid var(--line);background:var(--blue-l);color:var(--blue-d);padding:8px 4px;text-align:center;font-size:13px}
+.gh b{font-weight:800}.gh span{font-weight:800;font-size:15px}
+.gh.hoy{background:var(--blue);color:#fff}
+.gh:hover{filter:brightness(.97)}
+.gt{font-size:11.5px;color:var(--mut);font-weight:700;text-align:right;padding:6px 6px 0 0;border-top:1px solid var(--line)}
+.gc{border-top:1px solid var(--line);border-left:1px solid var(--line);padding:3px;display:grid;grid-template-columns:minmax(0,1fr);gap:3px;align-content:start;min-height:34px}
+.gc.hoy{background:#f4f8fe}
+.gb{grid-column:1/-1;background:repeating-linear-gradient(135deg,#f4f6fa,#f4f6fa 8px,#eef1f6 8px,#eef1f6 16px);color:var(--mut);font-size:12px;font-weight:700;text-align:center;padding:5px;border-top:1px solid var(--line)}
+.gl{border:1px dashed #b9d9c6;background:#f1faf5;color:#1c7a4d;border-radius:7px;font-size:11.5px;font-weight:700;padding:3px 6px;text-align:left}
+.gl.todo{padding:8px 6px}
+.gl:hover{background:#e0f5ea;border-color:var(--ok)}
+.gl.lleno{border:0;background:#f3f4f7;color:var(--mut);display:block;font-weight:600}
+.sc.mini{padding:3px 6px;font-size:11.5px;line-height:1.2}
+.sdf{display:flex;flex-wrap:wrap;gap:5px;padding:6px 6px 0;align-items:center}
+.sdf button{border:1px dashed #b9d9c6;background:#f1faf5;color:#1c7a4d;border-radius:99px;padding:2px 9px;font-size:12px;font-weight:700}
+.sdf span{font-size:12px;color:var(--mut)}
+.sdf::before{content:'Libre:';font-size:12px;color:var(--mut);font-weight:700}
+@media(max-width:760px){.semg{display:none}.sem{display:grid}}
 @media(max-width:760px){.sem{grid-template-columns:1fr}.sc2{white-space:normal}}
 .mes{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:6px}
 .mh2{text-align:center;font-weight:800;font-size:12px;color:var(--mut);text-transform:uppercase;padding:4px 0}
@@ -361,7 +383,7 @@ tr.clk{cursor:pointer}tr.clk:hover{background:var(--blue-l)}
 /* =====================================================================
    Datos y utilidades
    ===================================================================== */
-const APP_VERSION='2.5', APP_BUILD='15/10/2026 07:54';
+const APP_VERSION='2.6', APP_BUILD='15/10/2026 08:17';
 const SESIONES=[{ini:9*60,fin:14*60},{ini:17*60,fin:21*60}];
 const PASO=15, CABINAS=['1','2','3'], MIN_DIA=3*((14-9)+(21-17))*60;
 const ESTADOS={pendiente:'Pendiente',realizada:'Realizada',ausente:'No acudió',cancelada:'Cancelada'};
@@ -618,6 +640,32 @@ function barraNav(titulo,aria){
 }
 const lunesDe=f=>{const g=parseD(f).getDay();return addDays(f,-((g+6)%7))};
 const delDia=f=>S.citas.filter(c=>c.fecha===f&&activas(c)).sort((a,b)=>toMin(a.hora)-toMin(b.hora)||String(a.cabina).localeCompare(String(b.cabina)));
+const HORAS_AG=[9,10,11,12,13,17,18,19,20];
+function libresHora(f,h){
+  const ini=h*60,fin=ini+60, ocup=new Set(S.citas.filter(c=>c.fecha===f&&activas(c)&&toMin(c.hora)<fin&&toMin(c.hora)+Number(c.duracion)>ini).map(c=>String(c.cabina)));
+  return CABINAS.filter(c=>!ocup.has(c));
+}
+function chipCita(c,mini){
+  const p=pac(c.pacienteId),t=tra(c.tratamientoId),les=lesNombre(c.lesionId),mot=(c.motivo||'').trim();
+  const l2=[mot,les,t?t.nombre:''].filter(Boolean).join(' · ');
+  const nom=p?p.nombre:'(paciente no encontrado)';
+  return `<button class="sc mini ${c.estado}" data-act="cita" data-id="${c.id}" title="${esc([hm(toMin(c.hora))+'–'+hm(toMin(c.hora)+Number(c.duracion)),nom,mot&&('Motivo: '+mot),les,t?t.nombre:'','Cabina '+c.cabina].filter(Boolean).join(' · '))}"><div class="sc1"><b>${hm(toMin(c.hora))}</b><span class="nm">${esc(nom)}</span><em>C${esc(c.cabina)}</em></div>${l2?`<div class="sc3">${esc(l2)}</div>`:''}</button>`;
+}
+function gridSemana(dias,hoy){
+  let g='<div class="gh0"></div>'+dias.map(x=>`<button class="gh${x===hoy?' hoy':''}" data-act="ir-dia" data-f="${x}"><b>${esc(mayus(parseD(x).toLocaleDateString('es-ES',{weekday:'short'}).replace('.','')))}</b> <span>${parseD(x).getDate()}</span></button>`).join('');
+  HORAS_AG.forEach((h,i)=>{
+    if(h===17)g+=`<div class="gb">Cerrado de 14:00 a 17:00</div>`;
+    g+=`<div class="gt">${h}:00</div>`;
+    dias.forEach(x=>{
+      const ini=h*60, L=delDia(x).filter(c=>toMin(c.hora)>=ini&&toMin(c.hora)<ini+60), libres=libresHora(x,h);
+      const hueco=libres.length
+        ?`<button class="gl${libres.length===CABINAS.length&&!L.length?' todo':''}" data-act="hueco" data-f="${x}" data-m="${ini}" data-c="${libres[0]}" aria-label="Nueva cita ${h}:00">${libres.length===CABINAS.length?'＋ Libre':'＋ '+libres.length+' libre'+(libres.length>1?'s':'')}</button>`
+        :`<span class="gl lleno">Completo</span>`;
+      g+=`<div class="gc${x===hoy?' hoy':''}">${L.map(c=>chipCita(c)).join('')}${hueco}</div>`;
+    });
+  });
+  return `<div class="semg">${g}</div>`;
+}
 function vAgendaSemana(){
   const lun=lunesDe(S.fecha), dias=[0,1,2,3,4].map(i=>addDays(lun,i)), hoy=ymd(new Date());
   const a=parseD(dias[0]), b=parseD(dias[4]);
@@ -630,11 +678,13 @@ function vAgendaSemana(){
     return `<section class="sd${x===hoy?' hoy':''}"><button class="sdh" data-act="ir-dia" data-f="${x}" aria-label="Ver el día ${esc(fmtLong(x))}">
         <b>${esc(mayus(parseD(x).toLocaleDateString('es-ES',{weekday:'long'})))}</b><span>${parseD(x).getDate()} ${esc(parseD(x).toLocaleDateString('es-ES',{month:'short'}).replace('.',''))}</span>
         <i>${L.length?L.length+' cita'+(L.length>1?'s':'')+' · '+ocup+'%':'Sin citas'}</i></button>
+      <div class="sdf">${HORAS_AG.filter(h=>libresHora(x,h).length).map(h=>`<button data-act="hueco" data-f="${x}" data-m="${h*60}" data-c="${libresHora(x,h)[0]}">${h}:00</button>`).join('')||'<span>Sin huecos</span>'}</div>
       <div class="sdl">${L.length?L.map(c=>{
         const p=pac(c.pacienteId),t=tra(c.tratamientoId),les=lesNombre(c.lesionId),mot=(c.motivo||'').trim(),h0=toMin(c.hora);
         return `<button class="sc ${c.estado}" data-act="cita" data-id="${c.id}"><div class="sc1"><b>${hm(h0)}</b><span class="nm">${esc(p?p.nombre:'(paciente no encontrado)')}</span><em>Cab. ${esc(c.cabina)}</em></div>${mot?`<div class="sc2">${esc(mot)}</div>`:''}<div class="sc3">${esc([les,t?t.nombre:''].filter(Boolean).join(' · ')||'Sin tratamiento')}</div></button>`}).join(''):'<div class="sdv">—</div>'}</div></section>`}).join('');
   return `${barraNav(titulo,'Semana')}
-  <div class="muted" style="font-size:13px;margin:-4px 0 10px">${total} cita${total===1?'':'s'} esta semana · pulsa un día para verlo con las cabinas</div>
+  <div class="muted" style="font-size:13px;margin:-4px 0 10px">${total} cita${total===1?'':'s'} esta semana · pulsa un día para verlo con las cabinas · los huecos libres están marcados con ＋</div>
+  ${gridSemana(dias,hoy)}
   <div class="sem">${cols}</div>
   <div class="legend"><span><i style="background:#dcebfd;border-left:3px solid var(--blue)"></i>Pendiente</span><span><i style="background:#d7f1e3"></i>Realizada</span><span><i style="background:#ffeccb"></i>No acudió</span></div>`;
 }
@@ -1307,6 +1357,13 @@ const ACC={
   close:cierra,
   prev:()=>{const v=S.agVista;S.fecha=v==='semana'?addDays(S.fecha,-7):v==='mes'?mesMas(S.fecha,-1):wkday(addDays(S.fecha,-1),-1);render()},
   next:()=>{const v=S.agVista;S.fecha=v==='semana'?addDays(S.fecha,7):v==='mes'?mesMas(S.fecha,1):wkday(addDays(S.fecha,1),1);render()},
+  hueco:b=>{
+    const f=b.dataset.f,m=Number(b.dataset.m),c=b.dataset.c;
+    S.fecha=f;S.agVista='dia';render();
+    const sl=document.querySelector(`.slot[data-m="${m}"][data-c="${c}"]`);
+    if(sl)sl.scrollIntoView({block:'center'});
+    openCita({fecha:f,hora:hhmm(m),cabina:c});
+  },
   'ag-ver':b=>{S.agVista=b.dataset.v;render()},
   'ir-dia':b=>{S.fecha=b.dataset.f;S.agVista='dia';render();window.scrollTo(0,0)},
   hoy:()=>{S.fecha=today();render()},
