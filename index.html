@@ -211,6 +211,46 @@ tr.clk{cursor:pointer}tr.clk:hover{background:var(--blue-l)}
 .fac .fobs,.fac .fnota{font-size:12px;color:#555;margin:10px 0 0}
 @media(max-width:560px){.fac .two-col{grid-template-columns:1fr}}
 
+
+/* ---------- Agenda semana / mes ---------- */
+.nv1{display:flex;gap:8px;align-items:center;flex:1 1 auto;min-width:0}.nv2{display:flex;gap:8px;align-items:center;flex:none}
+.nv1 .daytitle{flex:1;min-width:0}
+@media(max-width:640px){.nv1{flex-basis:100%}.nv1 .daytitle{text-align:center;font-size:17px}.nv2{flex:1}.nv2 input{flex:1}}
+.sem{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:8px;align-items:start}
+.sd{background:#fff;border:1px solid var(--line);border-radius:12px;overflow:hidden}
+.sd.hoy{border-color:var(--blue);box-shadow:0 0 0 1px var(--blue)}
+.sdh{width:100%;border:0;background:var(--blue-l);text-align:left;padding:9px 10px;display:block;line-height:1.25}
+.sd.hoy .sdh{background:var(--blue);color:#fff}
+.sdh b{display:block;font-size:14px}.sdh span{font-size:13px;opacity:.85;margin-right:6px}.sdh i{font-style:normal;font-size:12px;opacity:.85;display:block}
+.sdh:hover{filter:brightness(.97)}
+.sdl{padding:6px;display:grid;grid-template-columns:minmax(0,1fr);gap:5px}
+.sdv{text-align:center;color:var(--mut);padding:10px 0}
+.sc{display:block;width:100%;min-width:0;overflow:hidden;text-align:left;border:0;border-left:4px solid var(--blue);background:#dcebfd;color:#0f3a73;border-radius:8px;padding:5px 7px;font-size:12.5px;line-height:1.25}
+.sc.realizada{background:#d7f1e3;border-color:var(--ok);color:#0f5c39}
+.sc.ausente{background:#ffeccb;border-color:var(--warn);color:#7a4c00}
+.sc.cancelada{background:#eceff4;border-color:#aab4c4;color:#667085;opacity:.7}
+.sc:hover{filter:brightness(.96)}
+.sc1{font-weight:600;display:flex;gap:5px;align-items:baseline}.sc1 b{font-weight:800;flex:none}
+.sc1 .nm{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.sc1 em{flex:none;font-style:normal;font-size:11px;opacity:.75}
+.sc2{font-style:italic;opacity:.9;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.sc3{opacity:.85;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+@media(max-width:760px){.sem{grid-template-columns:1fr}.sc2{white-space:normal}}
+.mes{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:6px}
+.mh2{text-align:center;font-weight:800;font-size:12px;color:var(--mut);text-transform:uppercase;padding:4px 0}
+.mc{background:#fff;border:1px solid var(--line);border-radius:10px;min-height:96px;padding:6px;text-align:left;display:flex;flex-direction:column;gap:3px;overflow:hidden}
+.mc:hover:not(:disabled){border-color:var(--blue);background:var(--blue-l)}
+.mc.fuera{background:transparent;border-style:dashed;opacity:.35;cursor:default}
+.mc.hoy{border-color:var(--blue);box-shadow:0 0 0 1px var(--blue)}
+.mn{display:flex;justify-content:space-between;align-items:center}
+.mn span{font-weight:800;font-size:15px}
+.mc.hoy .mn span{background:var(--blue);color:#fff;border-radius:99px;min-width:24px;height:24px;display:grid;place-items:center;font-size:13px}
+.mn em{font-style:normal;font-size:11px;font-weight:800;background:var(--blue-l);color:var(--blue-d);border-radius:99px;padding:1px 7px}
+.mi{display:block;font-size:11.5px;line-height:1.2;padding:1px 4px;border-radius:5px;background:#dcebfd;color:#0f3a73;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.mi.realizada{background:#d7f1e3;color:#0f5c39}.mi.ausente{background:#ffeccb;color:#7a4c00}.mi.cancelada{background:#eceff4;color:#667085}
+.mas{font-size:11px;color:var(--mut);font-weight:700}
+@media(max-width:640px){.mc{min-height:62px;padding:5px 4px}.mi,.mas{display:none}.mn span{font-size:14px}}
+
 /* ---------- Conexión ---------- */
 #cfg{min-height:100dvh;display:grid;place-items:center;padding:20px}
 .cfgbox{width:min(480px,100%)}
@@ -321,7 +361,7 @@ tr.clk{cursor:pointer}tr.clk:hover{background:var(--blue-l)}
 /* =====================================================================
    Datos y utilidades
    ===================================================================== */
-const APP_VERSION='2.4', APP_BUILD='14/10/2026 17:28';
+const APP_VERSION='2.5', APP_BUILD='15/10/2026 07:54';
 const SESIONES=[{ini:9*60,fin:14*60},{ini:17*60,fin:21*60}];
 const PASO=15, CABINAS=['1','2','3'], MIN_DIA=3*((14-9)+(21-17))*60;
 const ESTADOS={pendiente:'Pendiente',realizada:'Realizada',ausente:'No acudió',cancelada:'Cancelada'};
@@ -347,7 +387,7 @@ const initials=n=>String(n||'?').trim().split(/\s+/).slice(0,2).map(w=>w[0]).joi
 const today=()=>wkday(ymd(new Date()));
 
 const S={pacientes:[],tratamientos:[],lesiones:[],citas:[],gastos:[],facturas:[],config:{},
-         fecha:today(),vista:'agenda',modo:null,
+         fecha:today(),vista:'agenda',agVista:'semana',modo:null,
          inf:{per:'semana',desde:'',hasta:'',modo:'citas',pid:''},
          cu:{sec:'resumen',per:'mes',desde:'',hasta:''},
          tr:{sec:'tratamientos'}};
@@ -560,7 +600,62 @@ function etiquetasPago(c){
   else if(num(c.importe)>0)h+='<span class="tag pend">Pte. cobro</span>';
   return h;
 }
+
+/* ---------- Agenda: semana · mes · día ---------- */
+const mayus=t=>t?t[0].toUpperCase()+t.slice(1):t;
+function selectorVista(){
+  const v=S.agVista;
+  return `<div class="bar" style="margin-bottom:10px"><div class="seg" role="group" aria-label="Ver agenda por"><button class="${v==='semana'?'on':''}" data-act="ag-ver" data-v="semana">📆 Semana</button><button class="${v==='mes'?'on':''}" data-act="ag-ver" data-v="mes">🗓 Mes</button><button class="${v==='dia'?'on':''}" data-act="ag-ver" data-v="dia">📅 Día</button></div></div>`;
+}
 function vAgenda(){
+  const v=S.agVista||'semana';
+  return selectorVista()+(v==='semana'?vAgendaSemana():v==='mes'?vAgendaMes():vAgendaDia());
+}
+function barraNav(titulo,aria){
+  const hoyOk=S.agVista==='mes'?S.fecha.slice(0,7)===today().slice(0,7):lunesDe(S.fecha)===lunesDe(today());
+  return `<div class="bar"><div class="nv1"><button class="btn" data-act="prev" aria-label="${aria} anterior">‹</button><div class="daytitle">${esc(titulo)}</div><button class="btn" data-act="next" aria-label="${aria} siguiente">›</button></div>
+    <div class="nv2">${hoyOk?'':'<button class="btn sm" data-act="hoy">Hoy</button>'}<input type="date" id="fechaSel" value="${S.fecha}" style="width:auto" aria-label="Elegir fecha"><button class="btn primary" data-act="nueva-cita">＋ Nueva cita</button></div></div>`;
+}
+const lunesDe=f=>{const g=parseD(f).getDay();return addDays(f,-((g+6)%7))};
+const delDia=f=>S.citas.filter(c=>c.fecha===f&&activas(c)).sort((a,b)=>toMin(a.hora)-toMin(b.hora)||String(a.cabina).localeCompare(String(b.cabina)));
+function vAgendaSemana(){
+  const lun=lunesDe(S.fecha), dias=[0,1,2,3,4].map(i=>addDays(lun,i)), hoy=ymd(new Date());
+  const a=parseD(dias[0]), b=parseD(dias[4]);
+  const titulo=a.getMonth()===b.getMonth()
+    ?`Semana del ${a.getDate()} al ${b.getDate()} de ${a.toLocaleDateString('es-ES',{month:'long'})} de ${b.getFullYear()}`
+    :`Semana del ${a.getDate()} de ${a.toLocaleDateString('es-ES',{month:'short'}).replace('.','')} al ${b.getDate()} de ${b.toLocaleDateString('es-ES',{month:'short'}).replace('.','')} de ${b.getFullYear()}`;
+  const total=dias.reduce((n,x)=>n+delDia(x).length,0);
+  const cols=dias.map(x=>{
+    const L=delDia(x), min=L.reduce((n,c)=>n+Number(c.duracion),0), ocup=Math.round(min/MIN_DIA*100);
+    return `<section class="sd${x===hoy?' hoy':''}"><button class="sdh" data-act="ir-dia" data-f="${x}" aria-label="Ver el día ${esc(fmtLong(x))}">
+        <b>${esc(mayus(parseD(x).toLocaleDateString('es-ES',{weekday:'long'})))}</b><span>${parseD(x).getDate()} ${esc(parseD(x).toLocaleDateString('es-ES',{month:'short'}).replace('.',''))}</span>
+        <i>${L.length?L.length+' cita'+(L.length>1?'s':'')+' · '+ocup+'%':'Sin citas'}</i></button>
+      <div class="sdl">${L.length?L.map(c=>{
+        const p=pac(c.pacienteId),t=tra(c.tratamientoId),les=lesNombre(c.lesionId),mot=(c.motivo||'').trim(),h0=toMin(c.hora);
+        return `<button class="sc ${c.estado}" data-act="cita" data-id="${c.id}"><div class="sc1"><b>${hm(h0)}</b><span class="nm">${esc(p?p.nombre:'(paciente no encontrado)')}</span><em>Cab. ${esc(c.cabina)}</em></div>${mot?`<div class="sc2">${esc(mot)}</div>`:''}<div class="sc3">${esc([les,t?t.nombre:''].filter(Boolean).join(' · ')||'Sin tratamiento')}</div></button>`}).join(''):'<div class="sdv">—</div>'}</div></section>`}).join('');
+  return `${barraNav(titulo,'Semana')}
+  <div class="muted" style="font-size:13px;margin:-4px 0 10px">${total} cita${total===1?'':'s'} esta semana · pulsa un día para verlo con las cabinas</div>
+  <div class="sem">${cols}</div>
+  <div class="legend"><span><i style="background:#dcebfd;border-left:3px solid var(--blue)"></i>Pendiente</span><span><i style="background:#d7f1e3"></i>Realizada</span><span><i style="background:#ffeccb"></i>No acudió</span></div>`;
+}
+function vAgendaMes(){
+  const d=parseD(S.fecha), y=d.getFullYear(), m=d.getMonth(), hoy=ymd(new Date());
+  const titulo=mayus(d.toLocaleDateString('es-ES',{month:'long',year:'numeric'}));
+  const primero=ymd(new Date(y,m,1)), ultimo=ymd(new Date(y,m+1,0));
+  const semanas=[];for(let l=lunesDe(primero);l<=ultimo;l=addDays(l,7))semanas.push(l);
+  const cab=['Lun','Mar','Mié','Jue','Vie'].map(x=>`<div class="mh2">${x}</div>`).join('');
+  let n=0;
+  const celdas=semanas.map(l=>[0,1,2,3,4].map(i=>{
+    const x=addDays(l,i), fuera=parseD(x).getMonth()!==m, L=fuera?[]:delDia(x);
+    n+=L.length;
+    const chips=L.slice(0,3).map(c=>{const p=pac(c.pacienteId);return `<span class="mi ${c.estado}"><b>${c.hora}</b> ${esc(p?p.nombre.split(' ')[0]+' '+(p.nombre.split(' ')[1]||'')[0]+'.':'?')}</span>`}).join('');
+    return `<button class="mc${fuera?' fuera':''}${x===hoy?' hoy':''}" ${fuera?'disabled tabindex="-1"':`data-act="ir-dia" data-f="${x}"`} aria-label="${esc(fmtLong(x))}${L.length?': '+L.length+' citas':''}"><div class="mn"><span>${parseD(x).getDate()}</span>${L.length?`<em>${L.length}</em>`:''}</div>${chips}${L.length>3?`<span class="mas">+${L.length-3} más</span>`:''}</button>`}).join('')).join('');
+  return `${barraNav(titulo,'Mes')}
+  <div class="muted" style="font-size:13px;margin:-4px 0 10px">${n} cita${n===1?'':'s'} este mes · pulsa un día para verlo con las cabinas</div>
+  <div class="mes">${cab}${celdas}</div>`;
+}
+
+function vAgendaDia(){
   const f=S.fecha, d=parseD(f), lunes=addDays(f,-(d.getDay()-1));
   const dias=[0,1,2,3,4].map(i=>addDays(lunes,i));
   const del=S.citas.filter(c=>c.fecha===f&&activas(c));
@@ -1207,10 +1302,13 @@ function printPaciente(id){
 /* =====================================================================
    Eventos
    ===================================================================== */
+const mesMas=(f,n)=>{const d=parseD(f);d.setDate(1);d.setMonth(d.getMonth()+n);return wkday(ymd(d))};
 const ACC={
   close:cierra,
-  prev:()=>{S.fecha=wkday(addDays(S.fecha,-1),-1);render()},
-  next:()=>{S.fecha=wkday(addDays(S.fecha,1),1);render()},
+  prev:()=>{const v=S.agVista;S.fecha=v==='semana'?addDays(S.fecha,-7):v==='mes'?mesMas(S.fecha,-1):wkday(addDays(S.fecha,-1),-1);render()},
+  next:()=>{const v=S.agVista;S.fecha=v==='semana'?addDays(S.fecha,7):v==='mes'?mesMas(S.fecha,1):wkday(addDays(S.fecha,1),1);render()},
+  'ag-ver':b=>{S.agVista=b.dataset.v;render()},
+  'ir-dia':b=>{S.fecha=b.dataset.f;S.agVista='dia';render();window.scrollTo(0,0)},
   hoy:()=>{S.fecha=today();render()},
   vista:b=>{S.vistaAg=b.dataset.v;try{localStorage.setItem('cfx_vistaAg',b.dataset.v)}catch(e){}render()},
   dia:b=>{S.fecha=b.dataset.f;render()},
