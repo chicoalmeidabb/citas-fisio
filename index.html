@@ -190,6 +190,9 @@ dialog footer .sp{flex:1}
 .firma h4{margin:0 0 8px;font-family:'Quicksand',sans-serif;font-size:15px;color:var(--blue-d)}
 .firma canvas{display:block;width:100%;height:150px;border:2px dashed #8db4ea;border-radius:10px;background:#fbfdff;touch-action:none;cursor:crosshair}
 .firma img{display:block;max-width:100%;height:110px;object-fit:contain;border:1px solid var(--line);border-radius:10px;background:#fbfdff}
+.firma .chk{display:flex;gap:10px;align-items:flex-start;font-weight:500;font-size:13.5px;line-height:1.35;margin:0 0 8px;color:var(--ink)}
+.firma .chk input{width:20px;height:20px;flex:none;margin-top:1px}
+.firma .chk em{color:var(--mut,#667);font-style:normal;font-size:12px}
 .firma .fb{display:flex;gap:8px;align-items:center;margin-top:8px;flex-wrap:wrap}
 .firma .fb small{color:var(--mut,#667);font-size:12.5px}
 .note{background:#fff7e0;border:1px solid #f1dc9c;color:#6b4e00;border-radius:10px;padding:9px 12px;font-size:13.5px;margin:0 0 12px;line-height:1.4}
@@ -420,7 +423,7 @@ tr.clk{cursor:pointer}tr.clk:hover{background:var(--blue-l)}
 /* =====================================================================
    Datos y utilidades
    ===================================================================== */
-const APP_VERSION='3.2', APP_BUILD='16/10/2026 14:01';
+const APP_VERSION='3.4', APP_BUILD='16/10/2026 17:42';
 const SESIONES=[{ini:9*60,fin:14*60},{ini:17*60,fin:21*60}];
 const PASO=15, CABINAS=['1','2','3','4'], MIN_DIA=CABINAS.length*((14-9)+(21-17))*60;
 const cabLarga=c=>String(c)==='4'?'Gimnasio':'Cabina '+c, cabCorta=c=>String(c)==='4'?'Gim.':'Cab. '+c, cabLetra=c=>String(c)==='4'?'G':String(c);
@@ -475,7 +478,7 @@ function normaliza(d){
   S.lesiones=d.lesiones||[];
   S.citas=(d.citas||[]).map(c=>({...c,duracion:Number(c.duracion)||30,cabina:String(c.cabina),estado:c.estado||'pendiente',
     episodioId:c.episodioId||('s'+c.id),motivo:c.motivo||'',lesionId:c.lesionId||'',importe:c.importe??'',
-    pagada:flag(c.pagada)?'1':'0',terminado:flag(c.terminado)?'1':'0',firma:c.firma||'',firmaFecha:c.firmaFecha||''}));
+    pagada:flag(c.pagada)?'1':'0',terminado:flag(c.terminado)?'1':'0',firma:c.firma||'',firmaFecha:c.firmaFecha||'',consentimientos:c.consentimientos||''}));
   S.gastos=d.gastos||[];
   S.facturas=d.facturas||[];
   S.config={};(d.config||[]).forEach(r=>{S.config[r.id]=r.valor});
@@ -533,7 +536,7 @@ const api={
     }
     const r=await fetch(`${CFG.url}${CFG.url.includes('?')?'&':'?'}clave=${encodeURIComponent(CFG.clave)}`);
     const j=await r.json(); if(!j.ok)throw new Error(j.error||'Error al leer la hoja');
-    if((j.apiVersion||1)<3)throw new Error('El script de Google es de una versión antigua. Pega el nuevo Code.gs, ejecuta «preparar» y publica una nueva versión (mira LEEME.md).');
+    if((j.apiVersion||1)<4)throw new Error('El script de Google es de una versión antigua. Pega el nuevo Code.gs, ejecuta «preparar» y publica una nueva versión (mira LEEME.md).');
     return j;
   },
   async post(body){
@@ -993,7 +996,7 @@ function htmlHistorial(pid){
     return `<details class="ep"${i===eps.length-1?' open':''}><summary><span><b>${e.estado==='cancelado'?'Cancelado':'Tratamiento '+n}</b> · ${esc(les||'Sin lesión')}${tr?' · '+esc(tr):''}</span>${tagEp(e)}</summary>
       <div class="epb"><div class="muted" style="font-size:13px">${esc(fmtShort(e.inicio))} – ${esc(fmtShort(e.fin))} · ${e.sesiones} ${e.sesiones===1?'sesión':'sesiones'} realizada${e.sesiones===1?'':'s'} · Total ${eur(e.total)} · Cobrado ${eur(e.cobrado)}${e.pendiente>0.005?' · <b>Pendiente '+eur(e.pendiente)+'</b>':''}</div>
       ${e.motivo?`<div class="motivo"><b>Motivo:</b> ${esc(e.motivo)}</div>`:''}
-      ${(()=>{const f=firmaDeEp(e.id);return f?`<div class="motivo"><b>✍️ Firma del paciente:</b> <img src="${esc(f.firma)}" alt="Firma" style="height:48px;vertical-align:middle;background:#fbfdff;border:1px solid var(--line);border-radius:6px"> <span class="muted" style="font-size:12.5px">${esc(new Date(f.firmaFecha).toLocaleDateString('es-ES'))}</span></div>`:'<div class="motivo muted">✍️ Sin firma del paciente</div>'})()}
+      ${(()=>{const f=firmaDeEp(e.id);return f?`<div class="motivo"><b>✍️ Consentimiento y firma:</b> <img src="${esc(f.firma)}" alt="Firma" style="height:48px;vertical-align:middle;background:#fbfdff;border:1px solid var(--line);border-radius:6px"> <span class="muted" style="font-size:12.5px">${esc(new Date(f.firmaFecha).toLocaleDateString('es-ES'))}${listaConsent(f.consentimientos).length?' · '+listaConsent(f.consentimientos).length+' puntos de consentimiento':''}</span></div>`:'<div class="motivo muted">✍️ Sin firma del paciente</div>'})()}
       <div class="scroll"><table class="t"><thead><tr><th>Sesión</th><th>Fecha</th><th>Estado</th><th>Importe</th><th>Cobro</th><th>Notas</th></tr></thead><tbody>${e.citas.map((c,k)=>`<tr class="clk" data-act="cita" data-id="${c.id}"><td>${activas(c)?sesionN(c):'—'}</td><td>${esc(fmtShort(c.fecha))} ${c.hora}</td><td>${ESTADOS[c.estado]||esc(c.estado)}${c.terminado==='1'?' · <b>terminado</b>':''}</td><td>${c.estado==='realizada'&&c.importe!==''?eur(c.importe):'—'}</td><td>${c.estado==='realizada'?(c.pagada==='1'?'Pagada':(num(c.importe)>0?'Pendiente':'—')):'—'}</td><td>${esc(c.observaciones||'')}</td></tr>`).join('')}</tbody></table></div>
       ${btns?`<div class="chips">${btns}</div>`:''}</div></details>`}).join('');
 }
@@ -1020,7 +1023,7 @@ function opcionesHora(sel){
   let o='';SESIONES.forEach(s=>{for(let m=s.ini;m<s.fin;m+=PASO)o+=`<option value="${hhmm(m)}"${hhmm(m)===sel?' selected':''}>${hhmm(m)}</option>`});return o;
 }
 function openCita(c={}){
-  FIRMA.editando=false;FIRMA.ep=null;FIRMA.trazo=false;
+  FIRMA.editando=false;FIRMA.ep=null;FIRMA.trazo=false;FIRMA.acept=false;FIRMA.dataUrl='';FIRMA.checks={};FIRMA.puntos=[];
   const edit=!!c.id, estado=c.estado||'pendiente', t0=tra(c.tratamientoId), dur=Number(c.duracion)||t0?.duracion||30;
   const pacs=[...S.pacientes].sort((a,b)=>a.nombre.localeCompare(b.nombre,'es'));
   const les=[...S.lesiones].sort((a,b)=>a.nombre.localeCompare(b.nombre,'es'));
@@ -1071,9 +1074,10 @@ function openCita(c={}){
     const fac=S.facturas.find(f=>f.episodioId===rec.episodioId);
     if(fac&&old&&(old.estado!==rec.estado||num(old.importe)!==num(rec.importe)||old.terminado!==rec.terminado))return err(`Este tratamiento ya está facturado (${fac.numero}): no se puede cambiar el estado ni el importe de sus sesiones.`);
     if(old){rec.creado=old.creado}else delete rec.id;
+    if(FIRMA.trazo&&!FIRMA.acept)return err('La firma está sin confirmar: pulsa «Aceptar» (o «Borrar» para quitarla).');
     const fn=firmaNueva();
-    if(fn){rec.firma=fn;rec.firmaFecha=new Date().toISOString()}
-    else{rec.firma=old?.firma||'';rec.firmaFecha=old?.firmaFecha||''}
+    if(fn){rec.firma=fn;rec.firmaFecha=new Date().toISOString();rec.consentimientos=consentNuevo()}
+    else{rec.firma=old?.firma||'';rec.firmaFecha=old?.firmaFecha||'';rec.consentimientos=old?.consentimientos||''}
     S.fecha=wkday(rec.fecha);
     await guardar('Citas',rec);toast('Cita guardada');
     const eraReal=old&&old.estado==='realizada', eraTer=old&&old.terminado==='1';
@@ -1096,45 +1100,77 @@ function openCita(c={}){
   resumenCita();
   pintaFirma();
 }
-/* ---------- Firma del paciente (una por tratamiento; se dibuja con el dedo) ---------- */
-const FIRMA={trazo:false,editando:false,ep:null};
-function firmaDeEp(ep,id){ // firma más reciente del tratamiento (de cualquier sesión)
+/* ---------- Consentimiento informado y firma del paciente (una vez por tratamiento; se firma con el dedo) ---------- */
+const CONSENT_BASE=[
+ 'He sido informado/a del tratamiento de fisioterapia propuesto, de su finalidad, de sus posibles riesgos y de las alternativas, y he podido resolver mis dudas.',
+ 'Doy mi consentimiento libre y voluntario para recibir el tratamiento. Sé que puedo retirarlo en cualquier momento.',
+ 'He comunicado al fisioterapeuta mis enfermedades, alergias, medicación y, en su caso, embarazo.',
+ 'He leído la información sobre protección de datos y acepto el tratamiento de mis datos de salud para mi asistencia.',
+ '(Opcional) Acepto recibir recordatorios y comunicaciones sobre mis citas por WhatsApp y/o correo electrónico.'];
+const puntosConsent=()=>{const l=String(S.config.consentimientos||'').split('\n').map(x=>x.trim()).filter(Boolean);return l.length?l:CONSENT_BASE};
+const esOpcional=t=>/^\(opcional\)/i.test(t);
+const FIRMA={trazo:false,acept:false,dataUrl:'',puntos:[],checks:{},editando:false,ep:null};
+function firmaDeEp(ep){ // firma más reciente del tratamiento (de cualquier sesión)
   if(!ep)return null;
   const l=S.citas.filter(x=>epId(x)===ep&&x.firma).sort((a,b)=>String(a.firmaFecha).localeCompare(String(b.firmaFecha)));
   return l.length?l[l.length-1]:null;
 }
-function firmaNueva(){
-  const cv=gid('cFirmaCv');if(!cv||!FIRMA.trazo)return '';
+const firmaNueva=()=>FIRMA.acept?FIRMA.dataUrl:'';
+const consentNuevo=()=>FIRMA.acept?JSON.stringify(FIRMA.puntos):'';
+function exportaFirma(cv){
   let url=cv.toDataURL('image/png');
-  if(url.length>40000){ // límite de una celda de Sheets: reduce a la mitad
-    const t=document.createElement('canvas');t.width=cv.width/2;t.height=cv.height/2;
-    const x=t.getContext('2d');x.drawImage(cv,0,0,t.width,t.height);url=t.toDataURL('image/png');
-  }
+  if(url.length>40000){const t=document.createElement('canvas');t.width=cv.width/2;t.height=cv.height/2;t.getContext('2d').drawImage(cv,0,0,t.width,t.height);url=t.toDataURL('image/png')}
   return url.length>45000?'':url;
 }
+function listaConsent(arr){try{return JSON.parse(arr||'[]')}catch(e){return []}}
 function pintaFirma(forzar){
   const box=gid('cFirmaBox');if(!box)return;
-  const ep=gid('cEp').value, id=gid('cId').value;
-  if(!forzar&&FIRMA.ep===ep&&box.dataset.listo)return; // no repintar si no cambió el tratamiento
-  FIRMA.ep=ep;box.dataset.listo='1';FIRMA.trazo=false;
-  const f=firmaDeEp(ep,id);
+  const ep=gid('cEp').value;
+  if(!forzar&&FIRMA.ep===ep&&box.dataset.listo)return;
+  if(FIRMA.ep!==ep){FIRMA.acept=false;FIRMA.dataUrl='';FIRMA.trazo=false;FIRMA.checks={};FIRMA.puntos=[]}
+  FIRMA.ep=ep;box.dataset.listo='1';
+  const f=firmaDeEp(ep);
   const fecha=f&&f.firmaFecha?new Date(f.firmaFecha).toLocaleString('es-ES',{dateStyle:'short',timeStyle:'short'}):'';
-  if(f&&!FIRMA.editando){
-    box.innerHTML=`<h4>✍️ Firma del paciente</h4><img src="${esc(f.firma)}" alt="Firma del paciente"><div class="fb"><small>Firmado el ${esc(fecha)}</small><span class="sp"></span><button type="button" class="btn" id="cFirmarOtra">Firmar de nuevo</button></div>`;
-    gid('cFirmarOtra').onclick=()=>{FIRMA.editando=true;pintaFirma(true)};
+  const cab=`<h4>✍️ Consentimiento informado y firma del paciente</h4>`;
+  if(FIRMA.acept){ // aceptado, pendiente de guardar la cita
+    box.innerHTML=`${cab}<img src="${esc(FIRMA.dataUrl)}" alt="Firma del paciente"><div class="fb"><small>✓ Consentimiento aceptado (${FIRMA.puntos.length} puntos). Se guardará con la cita.</small><span class="sp"></span><button type="button" class="btn" id="cFirmaCamb">Cambiar</button></div>`;
+    gid('cFirmaCamb').onclick=()=>{FIRMA.acept=false;FIRMA.dataUrl='';FIRMA.trazo=false;pintaFirma(true)};
     return;
   }
-  box.innerHTML=`<h4>✍️ Firma del paciente <span style="font-weight:500;font-size:13px">(con el dedo, una vez por tratamiento)</span></h4><canvas id="cFirmaCv" width="640" height="240"></canvas><div class="fb"><small id="cFirmaAy">Firma dentro del recuadro</small><span class="sp"></span>${f?'<button type="button" class="btn" id="cFirmaCan">Cancelar</button>':''}<button type="button" class="btn" id="cFirmaBor">Borrar</button></div>`;
+  if(f&&!FIRMA.editando){
+    const pts=listaConsent(f.consentimientos);
+    box.innerHTML=`${cab}<img src="${esc(f.firma)}" alt="Firma del paciente"><div class="fb"><small>Firmado el ${esc(fecha)}${pts.length?' · '+pts.length+' puntos aceptados':''}</small><span class="sp"></span>${pts.length?'<button type="button" class="btn" id="cFirmaVer">Ver puntos</button>':''}<button type="button" class="btn" id="cFirmarOtra">Firmar de nuevo</button></div><ul id="cFirmaPts" class="hide" style="margin:8px 0 0;padding-left:20px;font-size:13px;line-height:1.4">${pts.map(t=>`<li>${esc(t)}</li>`).join('')}</ul>`;
+    gid('cFirmarOtra').onclick=()=>{FIRMA.editando=true;pintaFirma(true)};
+    if(gid('cFirmaVer'))gid('cFirmaVer').onclick=()=>gid('cFirmaPts').classList.toggle('hide');
+    return;
+  }
+  const puntos=puntosConsent();
+  box.innerHTML=`${cab}<p class="muted" style="font-size:13px;margin:0 0 6px">El paciente marca cada punto y firma con el dedo. La firma vale para todo el tratamiento.</p>
+    <div id="cPuntos">${puntos.map((t,i)=>`<label class="chk"><input type="checkbox" data-i="${i}"${FIRMA.checks[i]?' checked':''}><span>${esc(t.replace(/^\(opcional\)\s*/i,''))}${esOpcional(t)?' <em>(opcional)</em>':''}</span></label>`).join('')}</div>
+    <canvas id="cFirmaCv" width="640" height="240"></canvas>
+    <div class="fb"><small id="cFirmaAy">Firma dentro del recuadro</small><span class="sp"></span>${f?'<button type="button" class="btn" id="cFirmaCan">Cancelar</button>':''}<button type="button" class="btn" id="cFirmaBor">Borrar</button></div><p class="err" id="cFirmaErr" style="margin:6px 0 0"></p>`;
+  box.querySelectorAll('#cPuntos input').forEach(i=>i.onchange=()=>{FIRMA.checks[i.dataset.i]=i.checked;gid('cFirmaErr').textContent=''});
   const cv=gid('cFirmaCv'),cx=cv.getContext('2d');
   cx.lineWidth=4;cx.lineCap='round';cx.lineJoin='round';cx.strokeStyle='#10243f';
   let dib=false;
   const pt=e=>{const r=cv.getBoundingClientRect();return [(e.clientX-r.left)*cv.width/r.width,(e.clientY-r.top)*cv.height/r.height]};
-  cv.addEventListener('pointerdown',e=>{e.preventDefault();cv.setPointerCapture(e.pointerId);dib=true;const [x,y]=pt(e);cx.beginPath();cx.moveTo(x,y);cx.lineTo(x+.01,y+.01);cx.stroke();FIRMA.trazo=true;gid('cFirmaAy').textContent='✓ Firma recogida'});
+  const muestraAceptar=()=>{
+    gid('cFirmaAy').outerHTML='<button type="button" class="btn primary" id="cFirmaOk">Aceptar</button>';
+    gid('cFirmaOk').onclick=()=>{
+      const falta=puntos.findIndex((t,i)=>!esOpcional(t)&&!box.querySelector(`#cPuntos input[data-i="${i}"]`).checked);
+      if(falta>=0)return gid('cFirmaErr').textContent='Marca todos los puntos obligatorios antes de aceptar.';
+      const url=exportaFirma(cv);if(!url)return gid('cFirmaErr').textContent='La firma es demasiado grande: bórrala y firma más sencilla.';
+      FIRMA.dataUrl=url;FIRMA.acept=true;
+      FIRMA.puntos=puntos.filter((t,i)=>box.querySelector(`#cPuntos input[data-i="${i}"]`).checked).map(t=>t.replace(/^\(opcional\)\s*/i,'').trim());
+      pintaFirma(true);
+    };
+  };
+  cv.addEventListener('pointerdown',e=>{e.preventDefault();cv.setPointerCapture(e.pointerId);dib=true;const [x,y]=pt(e);cx.beginPath();cx.moveTo(x,y);cx.lineTo(x+.01,y+.01);cx.stroke();if(!FIRMA.trazo){FIRMA.trazo=true;muestraAceptar()}});
   cv.addEventListener('pointermove',e=>{if(!dib)return;e.preventDefault();const [x,y]=pt(e);cx.lineTo(x,y);cx.stroke()});
   const fin=()=>{dib=false};
   cv.addEventListener('pointerup',fin);cv.addEventListener('pointercancel',fin);cv.addEventListener('pointerleave',fin);
-  gid('cFirmaBor').onclick=()=>{cx.clearRect(0,0,cv.width,cv.height);FIRMA.trazo=false;gid('cFirmaAy').textContent='Firma dentro del recuadro'};
-  if(gid('cFirmaCan'))gid('cFirmaCan').onclick=()=>{FIRMA.editando=false;pintaFirma(true)};
+  gid('cFirmaBor').onclick=()=>{FIRMA.trazo=false;pintaFirma(true)};
+  if(gid('cFirmaCan'))gid('cFirmaCan').onclick=()=>{FIRMA.editando=false;FIRMA.trazo=false;pintaFirma(true)};
 }
 function resumenCita(){
   const el=gid('cRes');if(!el)return;
@@ -1307,29 +1343,63 @@ function openFactura(epid){
   if(e.factura)return verFactura(e.factura.id);
   if(e.estado!=='terminado')return toast('Primero hay que marcar el tratamiento como terminado en su última sesión.',true);
   const p=pac(e.pacienteId)||{};
-  if(e.total<=0)return toast('Las sesiones no tienen importe. Edita las citas y pon el importe antes de facturar.',true);
   const real=e.citas.filter(c=>c.estado==='realizada');
+  const precioDe=c=>num(tra(c.tratamientoId)?.precio)||num(tra(e.tratamientoId)?.precio)||0;
+  const filas=real.map(c=>{
+    const falta=String(c.importe).trim()==='';
+    const pre=falta?precioDe(c):num(c.importe);
+    return {c,falta,pre,sinPrecio:falta&&!pre};
+  });
+  const nFalta=filas.filter(f=>f.falta).length;
+  const opts=sel=>`<option value="">— Sin tratamiento —</option>`+S.tratamientos.map(t=>`<option value="${t.id}"${t.id===sel?' selected':''}>${esc(t.nombre)}</option>`).join('');
   abre(`<form>${head('Facturar tratamiento')}
-    <dl class="kv"><dt>Paciente</dt><dd>${esc(p.nombre||'—')}</dd><dt>Tratamiento</dt><dd>${esc(lesNombre(e.lesionId)||'—')}${tra(e.tratamientoId)?' · '+esc(tra(e.tratamientoId).nombre):''}</dd>
-      <dt>Sesiones</dt><dd>${real.length} (${esc(fmtShort(e.inicio))} – ${esc(fmtShort(e.fin))})</dd><dt>Total a facturar</dt><dd><b>${eur(e.total)}</b></dd><dt>Cobrado</dt><dd>${eur(e.cobrado)}${e.pendiente>0.005?` · pendiente ${eur(e.pendiente)}`:''}</dd></dl>
+    <dl class="kv"><dt>Paciente</dt><dd>${esc(p.nombre||'—')}</dd><dt>Lesión</dt><dd>${esc(lesNombre(e.lesionId)||'—')}</dd>
+      <dt>Sesiones</dt><dd>${real.length} (${esc(fmtShort(e.inicio))} – ${esc(fmtShort(e.fin))})</dd><dt>Total a facturar</dt><dd><b id="fTot">${eur(e.total)}</b></dd></dl>
+    <p class="muted" style="font-size:13.5px;margin:0 0 6px">Revisa las sesiones. Puedes cambiar el tratamiento y el importe de cada una antes de emitir la factura; el total es la suma.</p>
+    ${nFalta?`<div class="note">${nFalta===1?'Hay 1 sesión sin importe':'Hay '+nFalta+' sesiones sin importe'}. ${filas.some(f=>f.falta&&!f.sinPrecio)?'Se han rellenado con la tarifa del tratamiento. ':''}${filas.some(f=>f.sinPrecio)?'Las que quedan en blanco hay que rellenarlas. ':''}Compruébalo antes de emitir.</div>`:''}
+    <div class="scroll"><table class="t"><thead><tr><th>Sesión</th><th>Tratamiento</th><th>Importe (€)</th></tr></thead><tbody>${filas.map((f,i)=>`<tr><td>${i+1} · ${esc(fmtShort(f.c.fecha))}</td>
+      <td><select name="tra_${f.c.id}" data-id="${f.c.id}" class="fTra">${opts(f.c.tratamientoId)}</select></td>
+      <td><input name="imp_${f.c.id}" class="fImp" type="number" min="0" step="0.01" inputmode="decimal" style="width:92px" value="${f.pre?round2(f.pre):(f.falta?'':f.pre)}" placeholder="0,00"${f.falta?' data-falta="1"':''} required></td></tr>`).join('')}</tbody></table></div>
     ${!(p.nif)?'<div class="note">Este paciente no tiene DNI/NIF en su ficha. Puedes añadirlo antes en <b>Pacientes → Editar → Datos de facturación</b>.</div>':''}
     <label>Fecha de la factura<input type="date" name="fecha" required value="${ymd(new Date())}"></label>
-    ${e.pendiente>0.005?`<label style="display:flex;gap:10px;align-items:center;color:var(--ink)"><input type="checkbox" name="cobrar" value="1" style="width:auto"> Marcar como cobradas las sesiones pendientes (${eur(e.pendiente)})</label>`:''}
+    <label style="display:flex;gap:10px;align-items:center;color:var(--ink)"><input type="checkbox" name="cobrar" value="1" style="width:auto"> Marcar como cobradas las sesiones pendientes (<span id="fPen">${eur(0)}</span>)</label>
     <label>Observaciones de la factura<textarea name="observaciones" rows="2" placeholder="Opcional"></textarea></label>
     <p class="err" id="err"></p>
     <footer><span class="sp"></span><button type="button" class="btn" data-act="close">Cancelar</button><button class="btn primary">Emitir factura</button></footer></form>`,
   async fd=>{
-    const rec={episodioId:e.id,pacienteId:e.pacienteId,fecha:fd.get('fecha'),total:String(round2(e.total)),observaciones:String(fd.get('observaciones')||'')};
+    const nuevos=real.map(c=>({c,imp:round2(num(fd.get('imp_'+c.id))),tra:String(fd.get('tra_'+c.id)||''),vacio:String(fd.get('imp_'+c.id)||'').trim()===''}));
+    if(nuevos.some(n=>n.vacio))return (gid('err').textContent='Rellena el importe de todas las sesiones (puede ser 0 si no se cobra).'),false;
+    const total=round2(nuevos.reduce((a,n)=>a+n.imp,0));
+    if(total<=0)return (gid('err').textContent='El total de la factura debe ser mayor que 0.'),false;
+    const rec={episodioId:e.id,pacienteId:e.pacienteId,fecha:fd.get('fecha'),total:String(total),observaciones:String(fd.get('observaciones')||'')};
+    // 1) guarda los cambios en las sesiones (importe y tratamiento) antes de facturar
+    for(const n of nuevos){
+      if(String(n.c.importe)!==String(n.imp)||(n.c.tratamientoId||'')!==n.tra){
+        await guardar('Citas',{...n.c,importe:String(n.imp),tratamientoId:n.tra});
+      }
+    }
     let fac;
     try{
       if(S.facturas.some(f=>f.episodioId===e.id))throw new Error('Este tratamiento ya está facturado.');
       if(S.modo==='demo'){rec.id=uid();rec.numero=siguienteNumero(rec.fecha);rec.creado=new Date().toISOString();S.facturas.push(rec);persistDemo();fac=rec}
-      else{const j=await api.post({accion:'guardar',tabla:'Facturas',registro:rec});fac=j.registro;S.facturas.push(fac)}
+      else{await colaEnvio;const j=await api.post({accion:'guardar',tabla:'Facturas',registro:rec});fac=j.registro;S.facturas.push(fac)}
     }catch(er){gid('err').textContent=er.message;return false}
-    if(fd.get('cobrar')==='1')for(const c of real.filter(c=>c.pagada!=='1')){c.pagada='1';await guardar('Citas',c)}
+    if(fd.get('cobrar')==='1')for(const c of S.citas.filter(c=>epId(c)===e.id&&c.estado==='realizada'&&c.pagada!=='1'))await guardar('Citas',{...c,pagada:'1'});
     render();toast(`Factura ${fac.numero} emitida`);
     setTimeout(()=>verFactura(fac.id),0);return false;
   });
+  const calc=()=>{
+    let t=0,pen=0;
+    dlg.querySelectorAll('.fImp').forEach(i=>{const v=num(i.value);t+=v;const c=real.find(x=>x.id===i.name.slice(4));if(c&&c.pagada!=='1')pen+=v});
+    gid('fTot').textContent=eur(t);gid('fPen').textContent=eur(pen);
+  };
+  dlg.querySelectorAll('.fImp').forEach(i=>i.addEventListener('input',calc));
+  dlg.querySelectorAll('.fTra').forEach(sel=>sel.addEventListener('change',()=>{
+    const t=tra(sel.value),imp=dlg.querySelector(`[name="imp_${sel.dataset.id}"]`);
+    if(t&&num(t.precio)>0&&(imp.value===''||imp.dataset.falta==='1')){imp.value=round2(num(t.precio))}
+    calc();
+  }));
+  calc();
 }
 function htmlFactura(f){
   const p=pac(f.pacienteId)||{}, e=episodios(f.pacienteId).find(x=>x.id===f.episodioId), cfg=S.config;
@@ -1346,10 +1416,19 @@ function htmlFactura(f){
     ${f.observaciones?`<p class="fobs">${esc(f.observaciones)}</p>`:''}
     ${cfg.notaFactura?`<p class="fnota">${esc(cfg.notaFactura)}</p>`:''}</div>`;
 }
+const esUltimaFactura=f=>{ // solo la más reciente de su año se puede anular, para no romper la numeración correlativa
+  const an=String(f.fecha).slice(0,4);
+  return !S.facturas.some(x=>x.id!==f.id&&String(x.fecha).slice(0,4)===an&&String(x.numero)>String(f.numero));
+};
+async function anularFactura(id){
+  const f=S.facturas.find(x=>x.id===id);if(!f||!esUltimaFactura(f))return toast('Solo se puede anular la última factura emitida.',true);
+  if(!confirm(`¿Anular la factura ${f.numero}?\n\nEl tratamiento volverá a «terminado» y podrás corregir las sesiones y facturarlo de nuevo. La factura nueva usará este mismo número.\n\nSi ya se la diste al paciente, lo correcto es emitir una factura rectificativa; consúltalo con tu gestor.`))return;
+  await borrar('Facturas',id);cierra();toast(`Factura ${f.numero} anulada`);
+}
 function verFactura(id){
   const f=S.facturas.find(x=>x.id===id);if(!f)return;
   abre(`<div class="dlg">${head('Factura '+esc(f.numero))}${htmlFactura(f)}
-    <footer><span class="sp"></span><button class="btn" data-act="close">Cerrar</button><button class="btn primary" data-act="imprimir-fac" data-id="${f.id}">🖨 Imprimir / guardar PDF</button></footer></div>`,null,true);
+    <footer>${esUltimaFactura(f)?`<button class="btn danger" data-act="anular-fac" data-id="${f.id}">Anular factura</button>`:''}<span class="sp"></span><button class="btn" data-act="close">Cerrar</button><button class="btn primary" data-act="imprimir-fac" data-id="${f.id}">🖨 Imprimir / guardar PDF</button></footer></div>`,null,true);
 }
 
 /* ---------- Ajustes ---------- */
@@ -1359,6 +1438,7 @@ function openAjustes(){
     ${S.modo==='sheet'?`<dt>Conexión</dt><dd style="font-size:12px">${esc(CFG.url.slice(0,48))}…</dd>`:''}</dl>
     <div class="row" style="flex-wrap:wrap">
       <button class="btn" data-act="datos-clinica">🏥 Datos para las facturas</button>
+      <button class="btn" data-act="textos-consent">📝 Textos del consentimiento</button>
       <button class="btn" data-act="importar-pac">👥 Importar pacientes (CSV)</button>
       <button class="btn" data-act="recargar">↻ Recargar datos</button>
       <button class="btn" data-act="cambiar-conexion">Cambiar conexión</button>
@@ -1424,6 +1504,17 @@ function importarPacientesOk(){
   for(let i=0;i<lista.length;i+=200){const trozo=lista.slice(i,i+200).map(x=>({...x}));
     enviar(()=>api.post({accion:'guardarLote',tabla:'Pacientes',registros:trozo}))}
   enviar(async()=>{toast(`${lista.length} pacientes importados`)});
+}
+function openTextosConsent(){
+  abre(`<form>${head('Textos del consentimiento')}
+    <p class="muted" style="font-size:13.5px">Un punto por línea. El paciente marca cada uno antes de firmar. Si una línea empieza por <b>(Opcional)</b>, no es obligatorio marcarla. Estos textos son un ejemplo: conviene que los revise el fisioterapeuta o el Colegio.</p>
+    <label>Puntos del consentimiento<textarea name="consentimientos" rows="12">${esc(puntosConsent().join('\n'))}</textarea></label>
+    <p class="err" id="err"></p>
+    <footer><button type="button" class="btn" data-act="consent-base">Restaurar ejemplo</button><span class="sp"></span><button type="button" class="btn" data-act="close">Cancelar</button><button class="btn primary">Guardar</button></footer></form>`,
+  async fd=>{
+    try{await guardarConfig({consentimientos:String(fd.get('consentimientos')||'').split('\n').map(x=>x.trim()).filter(Boolean).join('\n')})}catch(e){gid('err').textContent=e.message;return false}
+    toast('Textos guardados');
+  });
 }
 function openDatosClinica(){
   const c=S.config;
@@ -1541,6 +1632,7 @@ const ACC={
   },
   facturar:b=>openFactura(b.dataset.ep),
   'ver-factura':b=>verFactura(b.dataset.id),
+  'anular-fac':b=>anularFactura(b.dataset.id),
   'imprimir-fac':b=>{const f=S.facturas.find(x=>x.id===b.dataset.id);cierra();imprimir(htmlFactura(f),true)},
   'nuevo-paciente':()=>openPaciente({}),
   paciente:b=>{S.fichaId=b.dataset.id;fichaPaciente(b.dataset.id)},
@@ -1581,6 +1673,8 @@ const ACC={
   'reset-demo':()=>{if(confirm('Se borrarán los datos de la demo y se cargarán otros de ejemplo.')){localStorage.removeItem('cfx_demo');cierra();arranca()}},
   'importar-pac':()=>{const i=document.createElement('input');i.type='file';i.accept='.csv,text/csv,text/plain';i.onchange=()=>{if(i.files[0])importarPacientesArchivo(i.files[0])};i.click()},
   'importar-ok':()=>importarPacientesOk(),
+  'textos-consent':()=>openTextosConsent(),
+  'consent-base':()=>{const t=dlg.querySelector('textarea[name=consentimientos]');if(t)t.value=CONSENT_BASE.join('\n')},
   'cfg-demo':async()=>{CFG={modo:'demo'};localStorage.setItem('cfx_cfg',JSON.stringify(CFG));arranca()},
   'cfg-connect':async()=>{
     const url=$('#cfgUrl').value.trim(),clave=$('#cfgKey').value;
