@@ -186,6 +186,12 @@ dialog footer .sp{flex:1}
 .ai .rt .tag{font-size:11px;padding:2px 8px}
 .cobro{border:1px solid var(--line);background:#f8fbff;border-radius:12px;padding:12px 12px 2px;margin-bottom:12px}
 .cobro h4{margin:0 0 10px;font-family:'Quicksand',sans-serif;font-size:15px;color:var(--blue-d)}
+.firma{border:1px solid var(--line);background:#fff;border-radius:12px;padding:12px;margin-bottom:12px}
+.firma h4{margin:0 0 8px;font-family:'Quicksand',sans-serif;font-size:15px;color:var(--blue-d)}
+.firma canvas{display:block;width:100%;height:150px;border:2px dashed #8db4ea;border-radius:10px;background:#fbfdff;touch-action:none;cursor:crosshair}
+.firma img{display:block;max-width:100%;height:110px;object-fit:contain;border:1px solid var(--line);border-radius:10px;background:#fbfdff}
+.firma .fb{display:flex;gap:8px;align-items:center;margin-top:8px;flex-wrap:wrap}
+.firma .fb small{color:var(--mut,#667);font-size:12.5px}
 .note{background:#fff7e0;border:1px solid #f1dc9c;color:#6b4e00;border-radius:10px;padding:9px 12px;font-size:13.5px;margin:0 0 12px;line-height:1.4}
 .resumen{background:var(--blue-l);border-radius:10px;padding:10px 12px;font-size:14px;font-weight:700;color:var(--blue-d);margin:4px 0 12px;line-height:1.5}
 .motivo{background:var(--bg);border-radius:10px;padding:8px 10px;margin:8px 0;font-size:14px}
@@ -414,7 +420,7 @@ tr.clk{cursor:pointer}tr.clk:hover{background:var(--blue-l)}
 /* =====================================================================
    Datos y utilidades
    ===================================================================== */
-const APP_VERSION='2.9', APP_BUILD='15/10/2026 08:50';
+const APP_VERSION='3.1', APP_BUILD='16/10/2026 13:36';
 const SESIONES=[{ini:9*60,fin:14*60},{ini:17*60,fin:21*60}];
 const PASO=15, CABINAS=['1','2','3'], MIN_DIA=3*((14-9)+(21-17))*60;
 const ESTADOS={pendiente:'Pendiente',realizada:'Realizada',ausente:'No acudió',cancelada:'Cancelada'};
@@ -468,7 +474,7 @@ function normaliza(d){
   S.lesiones=d.lesiones||[];
   S.citas=(d.citas||[]).map(c=>({...c,duracion:Number(c.duracion)||30,cabina:String(c.cabina),estado:c.estado||'pendiente',
     episodioId:c.episodioId||('s'+c.id),motivo:c.motivo||'',lesionId:c.lesionId||'',importe:c.importe??'',
-    pagada:flag(c.pagada)?'1':'0',terminado:flag(c.terminado)?'1':'0'}));
+    pagada:flag(c.pagada)?'1':'0',terminado:flag(c.terminado)?'1':'0',firma:c.firma||'',firmaFecha:c.firmaFecha||''}));
   S.gastos=d.gastos||[];
   S.facturas=d.facturas||[];
   S.config={};(d.config||[]).forEach(r=>{S.config[r.id]=r.valor});
@@ -526,7 +532,7 @@ const api={
     }
     const r=await fetch(`${CFG.url}${CFG.url.includes('?')?'&':'?'}clave=${encodeURIComponent(CFG.clave)}`);
     const j=await r.json(); if(!j.ok)throw new Error(j.error||'Error al leer la hoja');
-    if((j.apiVersion||1)<2)throw new Error('El script de Google es de una versión antigua. Pega el nuevo Code.gs, ejecuta «preparar» y publica una nueva versión (mira LEEME.md).');
+    if((j.apiVersion||1)<3)throw new Error('El script de Google es de una versión antigua. Pega el nuevo Code.gs, ejecuta «preparar» y publica una nueva versión (mira LEEME.md).');
     return j;
   },
   async post(body){
@@ -986,6 +992,7 @@ function htmlHistorial(pid){
     return `<details class="ep"${i===eps.length-1?' open':''}><summary><span><b>${e.estado==='cancelado'?'Cancelado':'Tratamiento '+n}</b> · ${esc(les||'Sin lesión')}${tr?' · '+esc(tr):''}</span>${tagEp(e)}</summary>
       <div class="epb"><div class="muted" style="font-size:13px">${esc(fmtShort(e.inicio))} – ${esc(fmtShort(e.fin))} · ${e.sesiones} ${e.sesiones===1?'sesión':'sesiones'} realizada${e.sesiones===1?'':'s'} · Total ${eur(e.total)} · Cobrado ${eur(e.cobrado)}${e.pendiente>0.005?' · <b>Pendiente '+eur(e.pendiente)+'</b>':''}</div>
       ${e.motivo?`<div class="motivo"><b>Motivo:</b> ${esc(e.motivo)}</div>`:''}
+      ${(()=>{const f=firmaDeEp(e.id);return f?`<div class="motivo"><b>✍️ Firma del paciente:</b> <img src="${esc(f.firma)}" alt="Firma" style="height:48px;vertical-align:middle;background:#fbfdff;border:1px solid var(--line);border-radius:6px"> <span class="muted" style="font-size:12.5px">${esc(new Date(f.firmaFecha).toLocaleDateString('es-ES'))}</span></div>`:'<div class="motivo muted">✍️ Sin firma del paciente</div>'})()}
       <div class="scroll"><table class="t"><thead><tr><th>Sesión</th><th>Fecha</th><th>Estado</th><th>Importe</th><th>Cobro</th><th>Notas</th></tr></thead><tbody>${e.citas.map((c,k)=>`<tr class="clk" data-act="cita" data-id="${c.id}"><td>${activas(c)?sesionN(c):'—'}</td><td>${esc(fmtShort(c.fecha))} ${c.hora}</td><td>${ESTADOS[c.estado]||esc(c.estado)}${c.terminado==='1'?' · <b>terminado</b>':''}</td><td>${c.estado==='realizada'&&c.importe!==''?eur(c.importe):'—'}</td><td>${c.estado==='realizada'?(c.pagada==='1'?'Pagada':(num(c.importe)>0?'Pendiente':'—')):'—'}</td><td>${esc(c.observaciones||'')}</td></tr>`).join('')}</tbody></table></div>
       ${btns?`<div class="chips">${btns}</div>`:''}</div></details>`}).join('');
 }
@@ -1012,6 +1019,7 @@ function opcionesHora(sel){
   let o='';SESIONES.forEach(s=>{for(let m=s.ini;m<s.fin;m+=PASO)o+=`<option value="${hhmm(m)}"${hhmm(m)===sel?' selected':''}>${hhmm(m)}</option>`});return o;
 }
 function openCita(c={}){
+  FIRMA.editando=false;FIRMA.ep=null;FIRMA.trazo=false;
   const edit=!!c.id, estado=c.estado||'pendiente', t0=tra(c.tratamientoId), dur=Number(c.duracion)||t0?.duracion||30;
   const pacs=[...S.pacientes].sort((a,b)=>a.nombre.localeCompare(b.nombre,'es'));
   const les=[...S.lesiones].sort((a,b)=>a.nombre.localeCompare(b.nombre,'es'));
@@ -1037,6 +1045,7 @@ function openCita(c={}){
       <label>¿Ha terminado el tratamiento?<select name="terminado" id="cTer"><option value="0">Continúa, será otra cita</option><option value="1"${c.terminado==='1'?' selected':''}>Sí, terminado (se factura)</option></select></label>
       <div class="resumen" id="cRes"></div>
     </div>
+    <div class="firma" id="cFirmaBox"></div>
     <label>Observaciones<textarea name="observaciones" rows="3">${esc(c.observaciones||'')}</textarea></label>
     <p class="err" id="err"></p>
     <footer>${edit?'<button type="button" class="btn danger" data-act="cita-del" data-id="'+c.id+'">Eliminar</button>':''}<span class="sp"></span><button type="button" class="btn" data-act="close">Cancelar</button><button class="btn primary">Guardar</button></footer></form>`,
@@ -1061,6 +1070,9 @@ function openCita(c={}){
     const fac=S.facturas.find(f=>f.episodioId===rec.episodioId);
     if(fac&&old&&(old.estado!==rec.estado||num(old.importe)!==num(rec.importe)||old.terminado!==rec.terminado))return err(`Este tratamiento ya está facturado (${fac.numero}): no se puede cambiar el estado ni el importe de sus sesiones.`);
     if(old){rec.creado=old.creado}else delete rec.id;
+    const fn=firmaNueva();
+    if(fn){rec.firma=fn;rec.firmaFecha=new Date().toISOString()}
+    else{rec.firma=old?.firma||'';rec.firmaFecha=old?.firmaFecha||''}
     S.fecha=wkday(rec.fecha);
     await guardar('Citas',rec);toast('Cita guardada');
     const eraReal=old&&old.estado==='realizada', eraTer=old&&old.terminado==='1';
@@ -1081,6 +1093,47 @@ function openCita(c={}){
   g('cPac').onchange=()=>onPacienteCita(null);
   if(!edit&&c.pacienteId)onPacienteCita(c);
   resumenCita();
+  pintaFirma();
+}
+/* ---------- Firma del paciente (una por tratamiento; se dibuja con el dedo) ---------- */
+const FIRMA={trazo:false,editando:false,ep:null};
+function firmaDeEp(ep,id){ // firma más reciente del tratamiento (de cualquier sesión)
+  if(!ep)return null;
+  const l=S.citas.filter(x=>epId(x)===ep&&x.firma).sort((a,b)=>String(a.firmaFecha).localeCompare(String(b.firmaFecha)));
+  return l.length?l[l.length-1]:null;
+}
+function firmaNueva(){
+  const cv=gid('cFirmaCv');if(!cv||!FIRMA.trazo)return '';
+  let url=cv.toDataURL('image/png');
+  if(url.length>40000){ // límite de una celda de Sheets: reduce a la mitad
+    const t=document.createElement('canvas');t.width=cv.width/2;t.height=cv.height/2;
+    const x=t.getContext('2d');x.drawImage(cv,0,0,t.width,t.height);url=t.toDataURL('image/png');
+  }
+  return url.length>45000?'':url;
+}
+function pintaFirma(forzar){
+  const box=gid('cFirmaBox');if(!box)return;
+  const ep=gid('cEp').value, id=gid('cId').value;
+  if(!forzar&&FIRMA.ep===ep&&box.dataset.listo)return; // no repintar si no cambió el tratamiento
+  FIRMA.ep=ep;box.dataset.listo='1';FIRMA.trazo=false;
+  const f=firmaDeEp(ep,id);
+  const fecha=f&&f.firmaFecha?new Date(f.firmaFecha).toLocaleString('es-ES',{dateStyle:'short',timeStyle:'short'}):'';
+  if(f&&!FIRMA.editando){
+    box.innerHTML=`<h4>✍️ Firma del paciente</h4><img src="${esc(f.firma)}" alt="Firma del paciente"><div class="fb"><small>Firmado el ${esc(fecha)}</small><span class="sp"></span><button type="button" class="btn" id="cFirmarOtra">Firmar de nuevo</button></div>`;
+    gid('cFirmarOtra').onclick=()=>{FIRMA.editando=true;pintaFirma(true)};
+    return;
+  }
+  box.innerHTML=`<h4>✍️ Firma del paciente <span style="font-weight:500;font-size:13px">(con el dedo, una vez por tratamiento)</span></h4><canvas id="cFirmaCv" width="640" height="240"></canvas><div class="fb"><small id="cFirmaAy">Firma dentro del recuadro</small><span class="sp"></span>${f?'<button type="button" class="btn" id="cFirmaCan">Cancelar</button>':''}<button type="button" class="btn" id="cFirmaBor">Borrar</button></div>`;
+  const cv=gid('cFirmaCv'),cx=cv.getContext('2d');
+  cx.lineWidth=4;cx.lineCap='round';cx.lineJoin='round';cx.strokeStyle='#10243f';
+  let dib=false;
+  const pt=e=>{const r=cv.getBoundingClientRect();return [(e.clientX-r.left)*cv.width/r.width,(e.clientY-r.top)*cv.height/r.height]};
+  cv.addEventListener('pointerdown',e=>{e.preventDefault();cv.setPointerCapture(e.pointerId);dib=true;const [x,y]=pt(e);cx.beginPath();cx.moveTo(x,y);cx.lineTo(x+.01,y+.01);cx.stroke();FIRMA.trazo=true;gid('cFirmaAy').textContent='✓ Firma recogida'});
+  cv.addEventListener('pointermove',e=>{if(!dib)return;e.preventDefault();const [x,y]=pt(e);cx.lineTo(x,y);cx.stroke()});
+  const fin=()=>{dib=false};
+  cv.addEventListener('pointerup',fin);cv.addEventListener('pointercancel',fin);cv.addEventListener('pointerleave',fin);
+  gid('cFirmaBor').onclick=()=>{cx.clearRect(0,0,cv.width,cv.height);FIRMA.trazo=false;gid('cFirmaAy').textContent='Firma dentro del recuadro'};
+  if(gid('cFirmaCan'))gid('cFirmaCan').onclick=()=>{FIRMA.editando=false;pintaFirma(true)};
 }
 function resumenCita(){
   const el=gid('cRes');if(!el)return;
@@ -1109,7 +1162,7 @@ function onPacienteCita(c0){
       rellena('cMot',u('motivo'));rellena('cLes',u('lesionId'));rellena('cTra',u('tratamientoId'));rellena('cImp',u('importe'));
       if(sinTra){const o=gid('cTra').selectedOptions[0];if(o&&o.dataset.d)gid('cDur').value=o.dataset.d}
     }else gid('cEp').value='';
-    resumenCita();
+    resumenCita();pintaFirma();
   };
   gid('cModo').onchange=aplica;aplica();
 }
@@ -1305,11 +1358,71 @@ function openAjustes(){
     ${S.modo==='sheet'?`<dt>Conexión</dt><dd style="font-size:12px">${esc(CFG.url.slice(0,48))}…</dd>`:''}</dl>
     <div class="row" style="flex-wrap:wrap">
       <button class="btn" data-act="datos-clinica">🏥 Datos para las facturas</button>
+      <button class="btn" data-act="importar-pac">👥 Importar pacientes (CSV)</button>
       <button class="btn" data-act="recargar">↻ Recargar datos</button>
       <button class="btn" data-act="cambiar-conexion">Cambiar conexión</button>
       ${esStandalone()?'':'<button class="btn" data-act="instalar">📲 Instalar la aplicación</button>'}
       ${S.modo==='demo'?'<button class="btn danger" data-act="reset-demo">Reiniciar demo</button>':''}
     </div></div>`);
+}
+/* ---------- Importar pacientes desde un CSV (Nombre, Dirección, NIF, Teléfono fijo, Móvil) ---------- */
+function parseCSV(t){
+  t=t.replace(/^\uFEFF/,'');
+  const sep=(t.split('\n')[0].match(/;/g)||[]).length>(t.split('\n')[0].match(/,/g)||[]).length?';':',';
+  const rows=[];let row=[],f='',q=false;
+  for(let i=0;i<t.length;i++){const c=t[i];
+    if(q){if(c==='"'){if(t[i+1]==='"'){f+='"';i++}else q=false}else f+=c}
+    else if(c==='"')q=true;
+    else if(c===sep){row.push(f);f=''}
+    else if(c==='\n'){row.push(f);rows.push(row);row=[];f=''}
+    else if(c!=='\r')f+=c;
+  }
+  if(f!==''||row.length){row.push(f);rows.push(row)}
+  return rows.filter(r=>r.some(x=>String(x).trim()!==''));
+}
+const sinAcentos=s=>String(s||'').normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase().replace(/\s+/g,' ').trim();
+function prepararImport(texto){
+  const rows=parseCSV(texto);if(rows.length<2)throw new Error('El fichero está vacío o no tiene el formato esperado.');
+  const h=rows[0].map(sinAcentos), ix=n=>h.findIndex(x=>x.startsWith(n));
+  const iN=ix('nombre'),iD=ix('direccion'),iF=ix('nif'),iT=ix('telefono'),iM=ix('movil');
+  if(iN<0)throw new Error('No encuentro la columna «Nombre». ¿Es el fichero clientes_para_importar.csv?');
+  const nifN=x=>String(x||'').toUpperCase().replace(/[\s.\-]/g,'');
+  const yaNif=new Set(S.pacientes.map(p=>nifN(p.nif)).filter(Boolean)), yaNom=new Set(S.pacientes.map(p=>sinAcentos(p.nombre)));
+  const nuevos=[],repetidos=[];
+  rows.slice(1).forEach(r=>{
+    const nombre=String(r[iN]||'').trim();if(!nombre)return;
+    const nif=nifN(iF>=0?r[iF]:''), fijo=String(iT>=0?r[iT]:'').trim(), mov=String(iM>=0?r[iM]:'').trim();
+    const rec={id:uid(),nombre,telefono:mov||fijo,email:'',dolencia:'',tratamiento:'',observaciones:(mov&&fijo)?'Teléfono fijo: '+fijo:'',creado:new Date().toISOString(),nif:iF>=0?String(r[iF]||'').trim():'',direccion:String(iD>=0?r[iD]:'').trim()};
+    const k=sinAcentos(nombre);
+    if((nif&&yaNif.has(nif))||yaNom.has(k)){repetidos.push(rec);return}
+    nuevos.push(rec);if(nif)yaNif.add(nif);yaNom.add(k);
+  });
+  return {nuevos,repetidos};
+}
+function importarPacientesArchivo(file){
+  const r=new FileReader();
+  r.onload=()=>{
+    let res;try{res=prepararImport(String(r.result))}catch(e){return toast(e.message,true)}
+    window._imp=res;
+    abre(`<div class="dlg">${head('Importar pacientes')}
+      <p>Fichero leído: <b>${res.nuevos.length+res.repetidos.length}</b> clientes.</p>
+      <p>✔ Nuevos que se añadirán: <b>${res.nuevos.length}</b></p>
+      <p>⏭ Repetidos (mismo NIF o mismo nombre que otro paciente) y se omiten: <b>${res.repetidos.length}</b></p>
+      <p class="muted" style="font-size:13.5px">La importación es segura: no se modifica ningún paciente que ya tengas. Puedes borrar pacientes sueltos después si hace falta.</p>
+      <p class="err" id="err"></p>
+      <footer><span class="sp"></span><button class="btn" data-act="close">Cancelar</button><button class="btn primary" data-act="importar-ok"${res.nuevos.length?'':' disabled'}>Importar ${res.nuevos.length} pacientes</button></footer></div>`);
+  };
+  r.onerror=()=>toast('No se pudo leer el fichero',true);
+  r.readAsText(file,'utf-8');
+}
+function importarPacientesOk(){
+  const lista=(window._imp&&window._imp.nuevos)||[];if(!lista.length)return;
+  S.pacientes.push(...lista);window._imp=null;cierra();render();
+  toast(`Importando ${lista.length} pacientes…`);
+  if(S.modo==='demo'){persistDemo();toast(`${lista.length} pacientes importados`);return}
+  for(let i=0;i<lista.length;i+=200){const trozo=lista.slice(i,i+200).map(x=>({...x}));
+    enviar(()=>api.post({accion:'guardarLote',tabla:'Pacientes',registros:trozo}))}
+  enviar(async()=>{toast(`${lista.length} pacientes importados`)});
 }
 function openDatosClinica(){
   const c=S.config;
@@ -1465,6 +1578,8 @@ const ACC={
   recargar:async()=>{cierra();await recargar()},
   'cambiar-conexion':()=>{cierra();$('#app').classList.add('hide');muestraCfg()},
   'reset-demo':()=>{if(confirm('Se borrarán los datos de la demo y se cargarán otros de ejemplo.')){localStorage.removeItem('cfx_demo');cierra();arranca()}},
+  'importar-pac':()=>{const i=document.createElement('input');i.type='file';i.accept='.csv,text/csv,text/plain';i.onchange=()=>{if(i.files[0])importarPacientesArchivo(i.files[0])};i.click()},
+  'importar-ok':()=>importarPacientesOk(),
   'cfg-demo':async()=>{CFG={modo:'demo'};localStorage.setItem('cfx_cfg',JSON.stringify(CFG));arranca()},
   'cfg-connect':async()=>{
     const url=$('#cfgUrl').value.trim(),clave=$('#cfgKey').value;
