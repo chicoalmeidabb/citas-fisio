@@ -427,7 +427,7 @@ tr.clk{cursor:pointer}tr.clk:hover{background:var(--blue-l)}
 /* =====================================================================
    Datos y utilidades
    ===================================================================== */
-const APP_VERSION='3.5', APP_BUILD='16/10/2026 18:13';
+const APP_VERSION='3.6', APP_BUILD='16/10/2026 19:12';
 const SESIONES=[{ini:9*60,fin:14*60},{ini:17*60,fin:21*60}];
 const PASO=15, CABINAS=['1','2','3','4'], MIN_DIA=CABINAS.length*((14-9)+(21-17))*60;
 const cabLarga=c=>String(c)==='4'?'Gimnasio':'Cabina '+c, cabCorta=c=>String(c)==='4'?'Gim.':'Cab. '+c, cabLetra=c=>String(c)==='4'?'G':String(c);
@@ -1436,13 +1436,6 @@ function verFactura(id){
 }
 
 /* ---------- Ajustes ---------- */
-const AYUDA=[["1. Qué es la aplicación y cómo se abre", 3],["2. La pantalla principal", 5],["3. Llega un paciente nuevo", 6],["4. La agenda", 9],["5. Durante y después de la sesión", 12],["6. Si el paciente no puede venir", 14],["7. La ficha del paciente y su historial", 15],["8. Facturar", 16],["9. Cuentas", 18],["10. Tratamientos y lesiones", 21],["11. Informes", 23],["12. Ajustes", 25],["13. Copias de seguridad y seguridad", 27],["14. Problemas frecuentes", 28],["15. Próximas mejoras", 29]];
-function openAyuda(){
-  abre(`<div class="dlg">${head('Ayuda · Manual de usuario')}
-    <p class="muted" style="font-size:13.5px;margin-top:0">Pulsa un tema para abrir el manual (PDF) en esa página.</p>
-    <div class="ayuda">${AYUDA.map(([t,p])=>`<a class="btn" href="manual.pdf#page=${p}" target="_blank" rel="noopener">${esc(t)}<span>pág. ${p}</span></a>`).join('')}</div>
-    <footer><span class="sp"></span><button class="btn" data-act="close">Cerrar</button><a class="btn primary" href="manual.pdf" target="_blank" rel="noopener">📖 Abrir el manual completo</a></footer></div>`);
-}
 function openAjustes(){
   abre(`<div class="dlg">${head('Ajustes')}
     <dl class="kv"><dt>Versión</dt><dd>${APP_VERSION} · ${APP_BUILD}</dd><dt>Modo</dt><dd>${S.modo==='demo'?'Demo (datos solo en este dispositivo)':'Conectado a la hoja de Google'}</dd>
@@ -1685,7 +1678,7 @@ const ACC={
   'importar-pac':()=>{const i=document.createElement('input');i.type='file';i.accept='.csv,text/csv,text/plain';i.onchange=()=>{if(i.files[0])importarPacientesArchivo(i.files[0])};i.click()},
   'importar-ok':()=>importarPacientesOk(),
   'textos-consent':()=>openTextosConsent(),
-  ayuda:()=>openAyuda(),
+  ayuda:()=>{window.open('manual.pdf','_blank')},
   'consent-base':()=>{const t=dlg.querySelector('textarea[name=consentimientos]');if(t)t.value=CONSENT_BASE.join('\n')},
   'cfg-demo':async()=>{CFG={modo:'demo'};localStorage.setItem('cfx_cfg',JSON.stringify(CFG));arranca()},
   'cfg-connect':async()=>{
