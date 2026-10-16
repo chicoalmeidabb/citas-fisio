@@ -101,7 +101,7 @@ input:focus,select:focus,textarea:focus{outline:2px solid var(--blue);outline-of
 .week button.on{background:var(--blue);border-color:var(--blue);color:#fff}
 .week button.on b,.week button.on i{color:#e6f0ff}
 .daytitle{font-family:'Quicksand',sans-serif;font-size:20px;font-weight:700}
-.agenda{display:grid;grid-template-columns:44px repeat(3,minmax(0,1fr));background:#fff;border:1px solid var(--line);border-radius:var(--r);overflow:clip;position:relative}
+.agenda{display:grid;grid-template-columns:44px repeat(4,minmax(0,1fr));background:#fff;border:1px solid var(--line);border-radius:var(--r);overflow:clip;position:relative}
 .agenda .hd{position:sticky;top:var(--hh,57px);z-index:5;background:var(--blue-l);color:var(--blue-d);font-weight:800;font-size:13px;text-align:center;padding:9px 2px;border-bottom:1px solid var(--line);border-left:1px solid var(--line)}
 .agenda .hd.first{border-left:0}
 .agenda .tl{font-size:11px;color:var(--mut);padding:0 5px 0 0;text-align:right;line-height:1;padding-top:3px;height:var(--slot)}
@@ -420,9 +420,10 @@ tr.clk{cursor:pointer}tr.clk:hover{background:var(--blue-l)}
 /* =====================================================================
    Datos y utilidades
    ===================================================================== */
-const APP_VERSION='3.1', APP_BUILD='16/10/2026 13:36';
+const APP_VERSION='3.2', APP_BUILD='16/10/2026 14:01';
 const SESIONES=[{ini:9*60,fin:14*60},{ini:17*60,fin:21*60}];
-const PASO=15, CABINAS=['1','2','3'], MIN_DIA=3*((14-9)+(21-17))*60;
+const PASO=15, CABINAS=['1','2','3','4'], MIN_DIA=CABINAS.length*((14-9)+(21-17))*60;
+const cabLarga=c=>String(c)==='4'?'Gimnasio':'Cabina '+c, cabCorta=c=>String(c)==='4'?'Gim.':'Cab. '+c, cabLetra=c=>String(c)==='4'?'G':String(c);
 const ESTADOS={pendiente:'Pendiente',realizada:'Realizada',ausente:'No acudió',cancelada:'Cancelada'};
 
 const SYMBOL_PRINT='<svg viewBox="0 0 480 900"><use href="#sym"/></svg>';
@@ -684,7 +685,7 @@ function libresHora(f,h){
 }
 function tituloCita(c){
   const p=pac(c.pacienteId),t=tra(c.tratamientoId),les=lesNombre(c.lesionId),mot=(c.motivo||'').trim();
-  return [hm(toMin(c.hora))+'–'+hm(toMin(c.hora)+Number(c.duracion)),p?p.nombre:'(paciente no encontrado)',mot&&('Motivo: '+mot),les,t?t.nombre:'','Cabina '+c.cabina].filter(Boolean).join(' · ');
+  return [hm(toMin(c.hora))+'–'+hm(toMin(c.hora)+Number(c.duracion)),p?p.nombre:'(paciente no encontrado)',mot&&('Motivo: '+mot),les,t?t.nombre:'',cabLarga(c.cabina)].filter(Boolean).join(' · ');
 }
 function carril(f,h,cab){
   const ini=h*60,fin=ini+60;
@@ -694,8 +695,8 @@ function carril(f,h,cab){
   const chips=cs.map(c=>{
     const p=pac(c.pacienteId),nom=p?p.nombre:'(paciente no encontrado)',mot=(c.motivo||'').trim(),h0=toMin(c.hora),cont=h0<ini;
     return `<button class="lk ${c.estado}${cont?' cont':''}" data-act="cita" data-id="${c.id}" title="${esc(tituloCita(c))}">${c.estado==='realizada'?'✓ ':c.estado==='ausente'?'✗ ':''}${cont?'':`<b>${hm(h0)}</b> `}${esc(nom)}${cont?` <em>· hasta ${hm(h0+Number(c.duracion))}</em>`:(mot?` <i>· ${esc(mot)}</i>`:'')}</button>`}).join('');
-  const btn=libre===null?'':`<button class="gl" data-act="hueco" data-f="${f}" data-m="${libre}" data-c="${cab}" aria-label="Nueva cita ${hm(libre)} cabina ${cab}">${libre===ini&&!cs.length?'＋ libre':'＋ '+hm(libre)}</button>`;
-  return `<div class="ln${libre===null?' llena':''}"><span class="cn">${cab}</span>${chips}${btn}</div>`;
+  const btn=libre===null?'':`<button class="gl" data-act="hueco" data-f="${f}" data-m="${libre}" data-c="${cab}" aria-label="Nueva cita ${hm(libre)} ${cabLarga(cab)}">${libre===ini&&!cs.length?'＋ libre':'＋ '+hm(libre)}</button>`;
+  return `<div class="ln${libre===null?' llena':''}"><span class="cn" title="${cabLarga(cab)}">${cabLetra(cab)}</span>${chips}${btn}</div>`;
 }
 function gridSemana(dias,hoy){
   let g='<div class="gh0"></div>'+dias.map(x=>`<button class="gh${x===hoy?' hoy':''}" data-act="ir-dia" data-f="${x}"><b>${esc(mayus(parseD(x).toLocaleDateString('es-ES',{weekday:'short'}).replace('.','')))}</b> <span>${parseD(x).getDate()}</span></button>`).join('');
@@ -724,9 +725,9 @@ function vAgendaSemana(){
       <div class="sdf">${HORAS_AG.filter(h=>libresHora(x,h).length).map(h=> `<button class="${h%2?'ha':'hb'}" data-act="hueco" data-f="${x}" data-m="${h*60}" data-c="${libresHora(x,h)[0]}">${h}:00${libresHora(x,h).length<CABINAS.length?' · '+libresHora(x,h).length+' libre'+(libresHora(x,h).length>1?'s':''):''}</button>`).join('')||'<span>Sin huecos</span>'}</div>
       <div class="sdl">${L.length?L.map(c=>{
         const p=pac(c.pacienteId),t=tra(c.tratamientoId),les=lesNombre(c.lesionId),mot=(c.motivo||'').trim(),h0=toMin(c.hora);
-        return `<button class="sc ${c.estado}" data-act="cita" data-id="${c.id}"><div class="sc1"><b>${hm(h0)}</b><span class="nm">${esc(p?p.nombre:'(paciente no encontrado)')}</span><em>Cab. ${esc(c.cabina)}</em></div>${mot?`<div class="sc2">${esc(mot)}</div>`:''}<div class="sc3">${esc([les,t?t.nombre:''].filter(Boolean).join(' · ')||'Sin tratamiento')}</div></button>`}).join(''):'<div class="sdv">—</div>'}</div></section>`}).join('');
+        return `<button class="sc ${c.estado}" data-act="cita" data-id="${c.id}"><div class="sc1"><b>${hm(h0)}</b><span class="nm">${esc(p?p.nombre:'(paciente no encontrado)')}</span><em>${esc(cabCorta(c.cabina))}</em></div>${mot?`<div class="sc2">${esc(mot)}</div>`:''}<div class="sc3">${esc([les,t?t.nombre:''].filter(Boolean).join(' · ')||'Sin tratamiento')}</div></button>`}).join(''):'<div class="sdv">—</div>'}</div></section>`}).join('');
   return `${barraNav(titulo,'Semana')}
-  <div class="muted" style="font-size:13px;margin:-4px 0 10px">${total} cita${total===1?'':'s'} esta semana · pulsa un día para verlo con las cabinas · en las horas con citas se ven las 3 cabinas: ＋ verde = cabina libre (con la hora desde la que queda libre)</div>
+  <div class="muted" style="font-size:13px;margin:-4px 0 10px">${total} cita${total===1?'':'s'} esta semana · pulsa un día para verlo con las cabinas · en las horas con citas se ven las ${CABINAS.length} cabinas: ＋ verde = cabina libre (con la hora desde la que queda libre)</div>
   ${gridSemana(dias,hoy)}
   <div class="sem">${cols}</div>
   <div class="legend"><span><i class="leyc" style="background:var(--blue)"></i>Pendiente</span><span><i class="leyc" style="background:var(--ok)"></i>✓ Realizada</span><span><i class="leyc" style="background:var(--warn)"></i>✗ No acudió</span><span>El color de fondo indica la franja horaria; la barra de la izquierda, el estado</span></div>`;
@@ -753,7 +754,7 @@ function vAgendaDia(){
   const dias=[0,1,2,3,4].map(i=>addDays(lunes,i));
   const del=S.citas.filter(c=>c.fecha===f&&activas(c));
   const ocup=Math.round(del.reduce((a,c)=>a+Number(c.duracion),0)/MIN_DIA*100);
-  let g='<div class="hd first">Hora</div>'+CABINAS.map(c=>`<div class="hd">Cabina ${c}</div>`).join('');
+  let g='<div class="hd first">Hora</div>'+CABINAS.map(c=>`<div class="hd">${cabLarga(c)}</div>`).join('');
   const filas=[];SESIONES.forEach((s,i)=>{for(let m=s.ini;m<s.fin;m+=PASO)filas.push(m);if(i===0)filas.push('brk')});
   filas.forEach((m,idx)=>{
     const row=idx+2;
@@ -781,7 +782,7 @@ function vAgendaDia(){
     return `<button class="ai ${c.estado}" data-act="cita" data-id="${c.id}">
       <div class="tm">${hm(a)}<small>a ${hm(b)}</small></div>
       <div class="m"><b>${esc(p?p.nombre:'(paciente no encontrado)')}</b>${(c.motivo||'').trim()?`<span class="mot">${esc(c.motivo.trim())}</span>`:''}<span>${l?esc(l)+' · ':''}${esc(t?t.nombre:'Sin tratamiento')} · Sesión ${sesionN(c)}</span></div>
-      <div class="rt"><span class="cb">Cabina ${esc(c.cabina)}</span>${c.estado==='pendiente'?'':`<span class="tag ${c.estado}">${ESTADOS[c.estado]}</span>`}${etiquetasPago(c)}</div></button>`}).join('')}</div>`
+      <div class="rt"><span class="cb">${esc(cabLarga(c.cabina))}</span>${c.estado==='pendiente'?'':`<span class="tag ${c.estado}">${ESTADOS[c.estado]}</span>`}${etiquetasPago(c)}</div></button>`}).join('')}</div>`
     :`<div class="card empty">No hay citas este día.<br><button class="btn primary" data-act="nueva-cita">＋ Nueva cita</button></div>`;
   return `
   <div class="week">${dias.map(x=>{const n=S.citas.filter(c=>c.fecha===x&&activas(c)).length;
@@ -918,7 +919,7 @@ function datosInforme(){
   let dias=0;for(let x=desde;x<=hasta&&dias<2000;x=addDays(x,1))if(!isWE(x))dias++;
   const ok=citas.filter(activas),min=ok.reduce((a,c)=>a+Number(c.duracion),0);
   const porT={};ok.forEach(c=>{const n=tra(c.tratamientoId)?.nombre||'Sin tratamiento';porT[n]=(porT[n]||0)+1});
-  const porC=CABINAS.map(c=>{const m=ok.filter(x=>x.cabina===c).reduce((a,x)=>a+Number(x.duracion),0);return {c,m,p:dias?Math.round(m/(dias*MIN_DIA/3)*100):0}});
+  const porC=CABINAS.map(c=>{const m=ok.filter(x=>x.cabina===c).reduce((a,x)=>a+Number(x.duracion),0);return {c,m,p:dias?Math.round(m/(dias*MIN_DIA/CABINAS.length)*100):0}});
   const cnt=e=>citas.filter(c=>c.estado===e).length;
   return {desde,hasta,citas,dias,total:citas.length,pend:cnt('pendiente'),real:cnt('realizada'),aus:cnt('ausente'),canc:cnt('cancelada'),
           ocup:dias?Math.round(min/(dias*MIN_DIA)*100):0,porT:Object.entries(porT).sort((a,b)=>b[1]-a[1]),porC,pacientes:new Set(ok.map(c=>c.pacienteId)).size};
@@ -947,7 +948,7 @@ function vInformes(){
   </div>
   <div class="two">
     <div class="card"><h3 style="margin:0 0 10px">Por tratamiento</h3><div class="bars">${D.porT.length?D.porT.map(([n,v])=>`<div class="b"><span>${esc(n)}</span><div class="t"><i style="width:${v/max*100}%"></i></div><span class="n">${v}</span></div>`).join(''):'<span class="muted">Sin datos en este periodo.</span>'}</div></div>
-    <div class="card"><h3 style="margin:0 0 10px">Ocupación por cabina</h3><div class="bars">${D.porC.map(x=>`<div class="b"><span>Cabina ${x.c}</span><div class="t"><i style="width:${Math.min(100,x.p)}%"></i></div><span class="n">${x.p}%</span></div>`).join('')}</div></div>
+    <div class="card"><h3 style="margin:0 0 10px">Ocupación por cabina</h3><div class="bars">${D.porC.map(x=>`<div class="b"><span>${cabLarga(x.c)}</span><div class="t"><i style="width:${Math.min(100,x.p)}%"></i></div><span class="n">${x.p}%</span></div>`).join('')}</div></div>
   </div>
   <div class="bar" style="margin-top:16px"><h3 style="margin:0">Listado de citas</h3><div class="sp"></div>
     <button class="btn" data-act="csv">⬇ Descargar CSV</button><button class="btn primary" data-act="print-inf">🖨 Imprimir / PDF</button></div>
@@ -955,7 +956,7 @@ function vInformes(){
 }
 function tablaCitas(L){
   if(!L.length)return '<div class="empty">No hay citas en este periodo.</div>';
-  return `<table class="t"><thead><tr><th>Fecha</th><th>Hora</th><th>Cab.</th><th>Paciente</th><th>Lesión</th><th>Tratamiento</th><th>Estado</th><th>Importe</th><th>Pago</th></tr></thead><tbody>${L.map(c=>`<tr><td>${esc(fmtShort(c.fecha))}</td><td>${c.hora}</td><td>${esc(c.cabina)}</td><td>${esc(pac(c.pacienteId)?.nombre||'—')}</td><td>${esc(lesNombre(c.lesionId)||'—')}</td><td>${esc(tra(c.tratamientoId)?.nombre||'—')}</td><td>${ESTADOS[c.estado]||esc(c.estado)}${c.terminado==='1'?' · terminado':''}</td><td>${c.estado==='realizada'&&c.importe!==''?eur(c.importe):'—'}</td><td>${c.estado==='realizada'?(c.pagada==='1'?'Pagada':(num(c.importe)>0?'Pendiente':'—')):'—'}</td></tr>`).join('')}</tbody></table>`;
+  return `<table class="t"><thead><tr><th>Fecha</th><th>Hora</th><th>Cab.</th><th>Paciente</th><th>Lesión</th><th>Tratamiento</th><th>Estado</th><th>Importe</th><th>Pago</th></tr></thead><tbody>${L.map(c=>`<tr><td>${esc(fmtShort(c.fecha))}</td><td>${c.hora}</td><td>${esc(cabCorta(c.cabina))}</td><td>${esc(pac(c.pacienteId)?.nombre||'—')}</td><td>${esc(lesNombre(c.lesionId)||'—')}</td><td>${esc(tra(c.tratamientoId)?.nombre||'—')}</td><td>${ESTADOS[c.estado]||esc(c.estado)}${c.terminado==='1'?' · terminado':''}</td><td>${c.estado==='realizada'&&c.importe!==''?eur(c.importe):'—'}</td><td>${c.estado==='realizada'?(c.pagada==='1'?'Pagada':(num(c.importe)>0?'Pendiente':'—')):'—'}</td></tr>`).join('')}</tbody></table>`;
 }
 function vHistorial(){
   const i=S.inf,L=[...S.pacientes].sort((a,b)=>a.nombre.localeCompare(b.nombre,'es'));
@@ -1035,7 +1036,7 @@ function openCita(c={}){
     <label>Tratamiento<select name="tratamientoId" id="cTra"><option value="">— Sin tratamiento —</option>${S.tratamientos.map(t=>`<option value="${t.id}" data-d="${t.duracion}" data-p="${esc(t.precio||'')}"${t.id===c.tratamientoId?' selected':''}>${esc(t.nombre)} · ${t.duracion} min${num(t.precio)>0?' · '+eur(t.precio):''}</option>`).join('')}</select></label>
     <div class="grid2"><label>Fecha<input type="date" name="fecha" required value="${esc(c.fecha||S.fecha)}"></label>
       <label>Hora<select name="hora">${opcionesHora(c.hora||'09:00')}</select></label></div>
-    <div class="grid2"><label>Cabina<select name="cabina">${CABINAS.map(x=>`<option value="${x}"${String(c.cabina||'1')===x?' selected':''}>Cabina ${x}</option>`).join('')}</select></label>
+    <div class="grid2"><label>Cabina<select name="cabina">${CABINAS.map(x=>`<option value="${x}"${String(c.cabina||'1')===x?' selected':''}>${cabLarga(x)}</option>`).join('')}</select></label>
       <label>Duración<select name="duracion" id="cDur">${[15,30,45,60,75,90].map(x=>`<option value="${x}"${x===dur?' selected':''}>${x} min</option>`).join('')}</select></label></div>
     <label>Estado<select name="estado" id="cEst">${Object.entries(ESTADOS).map(([k,v])=>`<option value="${k}"${estado===k?' selected':''}>${v}</option>`).join('')}</select></label>
     <div id="cCobro" class="cobro${estado==='realizada'?'':' hide'}">
@@ -1056,7 +1057,7 @@ function openCita(c={}){
     if(isWE(rec.fecha))return err('El centro solo abre de lunes a viernes.');
     if(!dentroHorario(toMin(rec.hora),Number(rec.duracion)))return err('La cita termina fuera del horario (9:00–14:00 y 17:00–21:00).');
     const x=conflicto(rec);
-    if(rec.estado!=='cancelada'&&x)return err(`La cabina ${rec.cabina} está ocupada: ${pac(x.pacienteId)?.nombre||'otra cita'} (${x.hora}).`);
+    if(rec.estado!=='cancelada'&&x)return err(`${cabLarga(rec.cabina)} está ocupada: ${pac(x.pacienteId)?.nombre||'otra cita'} (${x.hora}).`);
     if(rec.estado!=='realizada'){rec.pagada='0';rec.terminado='0'}
     rec.importe=String(rec.importe).trim()===''?'':String(round2(rec.importe));
     if(rec.estado==='realizada'&&(rec.pagada==='1'||rec.terminado==='1')&&rec.importe==='')return err('Indica el importe de la sesión (necesario si está pagada o para facturar).');
@@ -1462,7 +1463,7 @@ function filasHistorial(pid){
 function csv(){
   const D=datosInforme();
   const rows=[['Fecha','Hora','Duración (min)','Cabina','Paciente','Teléfono','Motivo','Lesión','Tratamiento','Estado','Importe (€)','Pagada','Terminado','Observaciones']];
-  D.citas.forEach(c=>{const p=pac(c.pacienteId);rows.push([fmtShort(c.fecha),c.hora,c.duracion,c.cabina,p?.nombre||'',p?.telefono||'',c.motivo||'',lesNombre(c.lesionId),tra(c.tratamientoId)?.nombre||'',ESTADOS[c.estado]||c.estado,c.estado==='realizada'?decimal(c.importe):'',c.estado==='realizada'?(c.pagada==='1'?'Sí':'No'):'',c.terminado==='1'?'Sí':'No',c.observaciones||''])});
+  D.citas.forEach(c=>{const p=pac(c.pacienteId);rows.push([fmtShort(c.fecha),c.hora,c.duracion,cabLarga(c.cabina),p?.nombre||'',p?.telefono||'',c.motivo||'',lesNombre(c.lesionId),tra(c.tratamientoId)?.nombre||'',ESTADOS[c.estado]||c.estado,c.estado==='realizada'?decimal(c.importe):'',c.estado==='realizada'?(c.pagada==='1'?'Sí':'No'):'',c.terminado==='1'?'Sí':'No',c.observaciones||''])});
   descargaCsv(`citas_${D.desde}_${D.hasta}.csv`,rows);
 }
 function csvCuentas(){
