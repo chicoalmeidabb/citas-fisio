@@ -382,7 +382,7 @@ tr.clk{cursor:pointer}tr.clk:hover{background:var(--blue-l)}
   <div class="card cfgbox">
     <div class="lg"><svg viewBox="0 0 480 900"><use href="#sym"/></svg>
       <div><h1>Conectar con tu hoja</h1></div></div>
-    <p>Pega la dirección de la aplicación web de Google Apps Script (termina en <b>/exec</b>) y la clave que pusiste en <code>Code.gs</code>.</p>
+    <p>La dirección de la hoja ya está puesta. Escribe la <b>clave de acceso</b> (la de <code>Code.gs</code>) y pulsa Conectar. Solo hay que hacerlo una vez en cada dispositivo.</p>
     <label>URL de Apps Script<input id="cfgUrl" type="url" placeholder="https://script.google.com/macros/s/…/exec" autocomplete="off"></label>
     <label>Clave de acceso<input id="cfgKey" type="password" autocomplete="off"></label>
     <p class="err" id="cfgErr"></p>
@@ -427,7 +427,7 @@ tr.clk{cursor:pointer}tr.clk:hover{background:var(--blue-l)}
 /* =====================================================================
    Datos y utilidades
    ===================================================================== */
-const APP_VERSION='3.6', APP_BUILD='16/10/2026 19:12';
+const APP_VERSION='3.8', APP_BUILD='21/10/2026 21:59';
 const SESIONES=[{ini:9*60,fin:14*60},{ini:17*60,fin:21*60}];
 const PASO=15, CABINAS=['1','2','3','4'], MIN_DIA=CABINAS.length*((14-9)+(21-17))*60;
 const cabLarga=c=>String(c)==='4'?'Gimnasio':'Cabina '+c, cabCorta=c=>String(c)==='4'?'Gim.':'Cab. '+c, cabLetra=c=>String(c)==='4'?'G':String(c);
@@ -459,6 +459,8 @@ const S={pacientes:[],tratamientos:[],lesiones:[],citas:[],gastos:[],facturas:[]
          cu:{sec:'resumen',per:'mes',desde:'',hasta:''},
          tr:{sec:'tratamientos'}};
 document.querySelectorAll('.ver').forEach(e=>e.textContent='Versión '+APP_VERSION+' · '+APP_BUILD);
+/* Dirección del script de Google (no es secreta sin la clave). La CLAVE no se escribe aquí nunca: se pide una vez en cada dispositivo. */
+const URL_POR_DEFECTO='https://script.google.com/macros/s/AKfycbwMpGHozp3OS7KEmMwUCXMI3KOU3cdrettJWPnVgeFX6_m98M5vivhKPlWhPeBTNC0F/exec';
 let CFG=JSON.parse(localStorage.getItem('cfx_cfg')||'null');
 
 /* ---------- utilidades de datos ---------- */
@@ -1445,6 +1447,7 @@ function openAjustes(){
       <button class="btn" data-act="textos-consent">📝 Textos del consentimiento</button>
       <button class="btn" data-act="importar-pac">👥 Importar pacientes (CSV)</button>
       <button class="btn" data-act="recargar">↻ Recargar datos</button>
+      ${S.modo==='sheet'&&localStorage.getItem('cfx_demo')?'<button class="btn" data-act="traer-demo">📥 Traer los datos de la demo</button>':''}
       <button class="btn" data-act="cambiar-conexion">Cambiar conexión</button>
       ${esStandalone()?'':'<button class="btn" data-act="instalar">📲 Instalar la aplicación</button>'}
       ${S.modo==='demo'?'<button class="btn danger" data-act="reset-demo">Reiniciar demo</button>':''}
@@ -1508,6 +1511,51 @@ function importarPacientesOk(){
   for(let i=0;i<lista.length;i+=200){const trozo=lista.slice(i,i+200).map(x=>({...x}));
     enviar(()=>api.post({accion:'guardarLote',tabla:'Pacientes',registros:trozo}))}
   enviar(async()=>{toast(`${lista.length} pacientes importados`)});
+}
+/* ---------- Traer a la hoja los datos que se escribieron en modo demo en este dispositivo ---------- */
+function demoPendiente(){
+  let d;try{d=JSON.parse(localStorage.getItem('cfx_demo')||'null')}catch(e){}
+  if(!d)return null;
+  const r={};let n=0;
+  ['tratamientos','lesiones','pacientes','citas','gastos','facturas'].forEach(k=>{
+    const ya=new Set((S[k]||[]).map(x=>x.id));
+    r[k]=(d[k]||[]).filter(x=>x&&x.id&&!ya.has(x.id));n+=r[k].length});
+  r.total=n;return r;
+}
+function openTraerDemo(){
+  const r=demoPendiente();
+  if(!r||!r.total){abre(`<div class="dlg">${head('Datos de la demo')}<p>No hay datos nuevos de la demo en este dispositivo: todo lo que había ya está en la hoja.</p><footer><span class="sp"></span><button class="btn primary" data-act="close">Vale</button></footer></div>`);return}
+  const L=[['pacientes','pacientes'],['citas','citas'],['tratamientos','tratamientos'],['lesiones','lesiones'],['gastos','gastos'],['facturas','facturas']].filter(([k])=>r[k].length);
+  const ej=r.pacientes.slice(0,4).map(p=>esc(p.nombre)).join(', ');
+  abre(`<div class="dlg">${head('Traer los datos de la demo')}
+    <p style="margin-top:0">En este dispositivo hay datos escritos en modo demo que <b>no están en la hoja de Google</b>:</p>
+    <ul>${L.map(([k,t])=>`<li><b>${r[k].length}</b> ${t}</li>`).join('')}</ul>
+    ${ej?`<p class="muted" style="font-size:13px">Pacientes, por ejemplo: ${ej}${r.pacientes.length>4?'…':''}</p>`:''}
+    <p class="muted" style="font-size:13px">Se añaden a la hoja sin tocar lo que ya hay. Si los vuelves a traer, no se duplican. Si la demo solo tiene los datos de ejemplo del programa, <b>no los traigas</b>.</p>
+    <p class="err" id="err"></p>
+    <footer><span class="sp"></span><button class="btn" data-act="close">Cancelar</button><button class="btn primary" data-act="traer-demo-ok">Traer a la hoja</button></footer></div>`);
+}
+async function traerDemoOk(){
+  const r=demoPendiente();if(!r||!r.total)return cierra();
+  cierra();
+  ['tratamientos','lesiones','pacientes','citas','gastos','facturas'].forEach(k=>S[k].push(...r[k]));
+  render();
+  const tab={tratamientos:'Tratamientos',lesiones:'Lesiones',citas:'Citas',gastos:'Gastos',facturas:'Facturas'};
+  enviar(async()=>{
+    let hechos=0,fallos=[];
+    const tot=r.total,prog=()=>toast(`Subiendo datos… ${hechos}/${tot}`);
+    const una=async(t,reg)=>{try{await api.post({accion:'guardar',tabla:t,registro:{...reg}})}catch(e){fallos.push(t+': '+e.message)}hechos++;if(hechos%10===0)prog()};
+    for(const reg of r.tratamientos)await una('Tratamientos',reg);
+    for(const reg of r.lesiones)await una('Lesiones',reg);
+    for(let i=0;i<r.pacientes.length;i+=200){const tr=r.pacientes.slice(i,i+200).map(x=>({...x}));
+      try{await api.post({accion:'guardarLote',tabla:'Pacientes',registros:tr})}catch(e){fallos.push('Pacientes: '+e.message)}hechos+=tr.length;prog()}
+    for(const reg of r.citas)await una('Citas',reg);
+    for(const reg of r.gastos)await una('Gastos',reg);
+    for(const reg of r.facturas)await una('Facturas',reg);
+    if(fallos.length){toast(`Se subieron ${tot-fallos.length} de ${tot}. Fallos: ${fallos.slice(0,2).join(' | ')}`,true)}
+    else toast(`Listo: ${tot} registros subidos a la hoja`);
+    await recargar(true);
+  });
 }
 function openTextosConsent(){
   abre(`<form>${head('Textos del consentimiento')}
@@ -1678,6 +1726,8 @@ const ACC={
   'importar-pac':()=>{const i=document.createElement('input');i.type='file';i.accept='.csv,text/csv,text/plain';i.onchange=()=>{if(i.files[0])importarPacientesArchivo(i.files[0])};i.click()},
   'importar-ok':()=>importarPacientesOk(),
   'textos-consent':()=>openTextosConsent(),
+  'traer-demo':()=>openTraerDemo(),
+  'traer-demo-ok':()=>traerDemoOk(),
   ayuda:()=>{window.open('manual.pdf','_blank')},
   'consent-base':()=>{const t=dlg.querySelector('textarea[name=consentimientos]');if(t)t.value=CONSENT_BASE.join('\n')},
   'cfg-demo':async()=>{CFG={modo:'demo'};localStorage.setItem('cfx_cfg',JSON.stringify(CFG));arranca()},
@@ -1716,7 +1766,8 @@ document.addEventListener('change',e=>{
    ===================================================================== */
 function muestraCfg(){
   $('#cfg').classList.remove('hide');
-  if(CFG&&CFG.url)$('#cfgUrl').value=CFG.url;
+  $('#cfgUrl').value=(CFG&&CFG.url)||URL_POR_DEFECTO;
+  if(CFG&&CFG.clave)$('#cfgKey').value='';
 }
 function ajustaCabecera(){const h=document.querySelector('header.top');if(h)document.documentElement.style.setProperty('--hh',h.offsetHeight+'px')}
 addEventListener('resize',ajustaCabecera);
