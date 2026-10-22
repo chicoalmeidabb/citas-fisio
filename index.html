@@ -353,6 +353,16 @@ tr.clk{cursor:pointer}tr.clk:hover{background:var(--blue-l)}
   #printArea .fac h5{margin:0 0 4px;font-size:11px;text-transform:uppercase;color:#666}
   #printArea .fac .fobs,#printArea .fac .fnota{font-size:11px;color:#555}
 }
+
+.list>*{min-width:0}
+.ejz{font-family:'Quicksand',sans-serif;font-size:17px;margin:18px 0 8px;color:var(--blue-d)}
+.item.soon{opacity:.55;cursor:default}
+#ejv{position:fixed;inset:0;z-index:70;background:var(--bg,#f5f7fb);display:none;flex-direction:column}
+#ejv.on{display:flex}
+#ejv .bar2{display:flex;align-items:center;gap:10px;background:var(--blue);color:#fff;padding:8px 12px;padding-top:calc(8px + env(safe-area-inset-top))}
+#ejv .bar2 button{background:rgba(255,255,255,.2);border:0;color:#fff;font-weight:700;padding:9px 14px;border-radius:10px;font-size:15px}
+#ejv .bar2 b{font-family:'Quicksand',sans-serif;font-size:17px}
+#ejv iframe{flex:1;border:0;width:100%;background:#f2f5f9}
 </style>
 </head>
 <body>
@@ -408,6 +418,7 @@ tr.clk{cursor:pointer}tr.clk:hover{background:var(--blue-l)}
       <button data-v="pacientes"><span class="ic">👥</span>Pacientes</button>
       <button data-v="tratamientos"><span class="ic">🩺</span>Tratamientos</button>
       <button data-v="cuentas"><span class="ic">💶</span>Cuentas</button>
+      <button data-v="ejercicios"><span class="ic">🤸</span>Ejercicios</button>
       <button data-v="informes"><span class="ic">📊</span>Informes</button>
     </nav>
     <button class="icon-btn hide" id="btnInstall" data-act="instalar" aria-label="Instalar aplicación" title="Instalar aplicación">⬇</button>
@@ -416,6 +427,7 @@ tr.clk{cursor:pointer}tr.clk:hover{background:var(--blue-l)}
     <button class="icon-btn" data-act="settings" aria-label="Ajustes">⚙</button>
   </header>
   <main id="view"></main>
+  <div id="ejv" role="dialog" aria-label="Ejercicios en 3D"><div class="bar2"><button data-act="ej-cerrar">‹ Volver</button><b id="ejvT"></b></div><iframe id="ejvF" title="Ejercicios en 3D"></iframe></div>
 </div>
 
 <dialog id="dlg"></dialog>
@@ -427,7 +439,7 @@ tr.clk{cursor:pointer}tr.clk:hover{background:var(--blue-l)}
 /* =====================================================================
    Datos y utilidades
    ===================================================================== */
-const APP_VERSION='3.8', APP_BUILD='21/10/2026 21:59';
+const APP_VERSION='3.9', APP_BUILD='22/10/2026 11:20';
 const SESIONES=[{ini:9*60,fin:14*60},{ini:17*60,fin:21*60}];
 const PASO=15, CABINAS=['1','2','3','4'], MIN_DIA=CABINAS.length*((14-9)+(21-17))*60;
 const cabLarga=c=>String(c)==='4'?'Gimnasio':'Cabina '+c, cabCorta=c=>String(c)==='4'?'Gim.':'Cab. '+c, cabLetra=c=>String(c)==='4'?'G':String(c);
@@ -656,7 +668,7 @@ function render(){
   document.querySelectorAll('#tabs button').forEach(b=>b.classList.toggle('on',b.dataset.v===S.vista));
   pillEstado();
   const v=$('#view');
-  v.innerHTML={agenda:vAgenda,pacientes:vPacientes,tratamientos:vTratamientos,cuentas:vCuentas,informes:vInformes}[S.vista]();
+  v.innerHTML={agenda:vAgenda,pacientes:vPacientes,tratamientos:vTratamientos,cuentas:vCuentas,ejercicios:vEjercicios,informes:vInformes}[S.vista]();
   if(S.vista==='pacientes'){const q=$('#q');if(q)q.oninput=()=>pintaPacientes()}
 }
 
@@ -1437,6 +1449,21 @@ function verFactura(id){
     <footer>${esUltimaFactura(f)?`<button class="btn danger" data-act="anular-fac" data-id="${f.id}">Anular factura</button>`:''}<span class="sp"></span><button class="btn" data-act="close">Cerrar</button><button class="btn primary" data-act="imprimir-fac" data-id="${f.id}">🖨 Imprimir / guardar PDF</button></footer></div>`,null,true);
 }
 
+/* ---------- Ejercicios (visor 3D en un archivo aparte) ---------- */
+const EJERCICIOS=[
+  {zona:'Cadera y glúteo',items:[{id:'piramidal',ico:'🦵',nombre:'Piramidal (piriforme)',desc:'5 ejercicios animados en 3D',archivo:'piramidal.html'}]},
+  {zona:'Zona lumbar',items:[]},{zona:'Cervical y hombro',items:[]},{zona:'Rodilla y tobillo',items:[]}
+];
+function vEjercicios(){
+  return `<h2 class="vt">Ejercicios</h2>
+  <p class="muted" style="margin-top:-4px;font-size:13.5px">Figuras en 3D que se pueden girar y ver en movimiento, para enseñar al paciente cómo hacer cada ejercicio. Se agrupan por zona del cuerpo.</p>
+  ${EJERCICIOS.map(z=>`<h3 class="ejz">${esc(z.zona)}</h3><div class="list">${z.items.length?z.items.map(x=>`<button class="item" data-act="ej-abrir" data-id="${x.id}"><div class="av">${x.ico}</div><div class="m"><b>${esc(x.nombre)}</b><span>${esc(x.desc)}</span></div></button>`).join(''):`<div class="item soon"><div class="av">…</div><div class="m"><b>Próximamente</b><span>Aquí irán más ejercicios de esta zona.</span></div></div>`}</div>`).join('')}`;
+}
+function abreEj(id){
+  const x=EJERCICIOS.flatMap(z=>z.items).find(i=>i.id===id);if(!x)return;
+  $('#ejvT').textContent=x.nombre;$('#ejvF').src=x.archivo+'?app=1';$('#ejv').classList.add('on');
+}
+function cierraEj(){$('#ejv').classList.remove('on');$('#ejvF').src='about:blank'}
 /* ---------- Ajustes ---------- */
 function openAjustes(){
   abre(`<div class="dlg">${head('Ajustes')}
@@ -1649,6 +1676,8 @@ function printPaciente(id){
 const mesMas=(f,n)=>{const d=parseD(f);d.setDate(1);d.setMonth(d.getMonth()+n);return wkday(ymd(d))};
 const ACC={
   close:cierra,
+  'ej-abrir':b=>abreEj(b.dataset.id),
+  'ej-cerrar':()=>cierraEj(),
   prev:()=>{const v=S.agVista;S.fecha=v==='semana'?addDays(S.fecha,-7):v==='mes'?mesMas(S.fecha,-1):wkday(addDays(S.fecha,-1),-1);render()},
   next:()=>{const v=S.agVista;S.fecha=v==='semana'?addDays(S.fecha,7):v==='mes'?mesMas(S.fecha,1):wkday(addDays(S.fecha,1),1);render()},
   hueco:b=>{
