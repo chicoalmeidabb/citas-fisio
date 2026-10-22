@@ -1643,7 +1643,7 @@ document.querySelectorAll('.item').forEach(it=>{
 /* ---------------- Ilustraciones (opcional por ejercicio) ---------------- */
 const ILUS={};
 /* ---------------- Vistas: ilustración / figura realista / muñeco ---------------- */
-const REAL=new Set(['frontal','apertura','nuca','codo','pendulo','lateral']);
+const REAL=new Set([]);
 const VN={ilu:'Ilustración',real:'Figura realista',mun:'Muñeco 3D'};
 let vista=(()=>{const q=(location.search.match(/[?&]v=(ilu|real|mun)/)||[])[1];if(q)return q;try{const s=localStorage.getItem('vistaFisio');if(s&&VN[s])return s}catch(_){}return 'ilu'})();
 const stageEl=document.getElementById('stage');
