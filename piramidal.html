@@ -95,6 +95,7 @@ input[type=range]{flex:1;min-width:0;accent-color:var(--accent);height:28px}
 .warn b{display:block;margin-bottom:4px}
 footer{font-size:13px;color:var(--mut);max-width:80ch}
 @media (prefers-reduced-motion:reduce){*{scroll-behavior:auto!important}}
+.share{display:flex;gap:8px;flex-wrap:wrap;margin-top:12px}.share .wa{background:#1f9d55;border-color:#1f9d55;color:#fff}.ctrl{flex-wrap:wrap}
 html{padding:env(safe-area-inset-top,0) 0 env(safe-area-inset-bottom,0)}body{margin:0}[hidden]{display:none!important}html.emb header h1{display:none}html.emb header p{margin-top:0}
 </style>
 
@@ -173,7 +174,17 @@ const EJ=[
   cam:{p:[1.9,1.3,1.5],t:[0,.2,.05]},xray:true,
   dosis:['2 o 3 series','12 a 15 repeticiones','Cada lado'],
   pasos:['Túmbate de lado con las caderas dobladas unos 45° y las rodillas dobladas a 90°, con los pies juntos.','Mantén los pies pegados y abre la rodilla de arriba, como una almeja que se abre.','Sube sin que la pelvis gire hacia atrás. Mantén 2 segundos.','Cierra despacio y repite. Después cambia de lado.'],
-  nota:'Apoya la mano en la cadera de arriba para notar si la pelvis se mueve. Debe quedarse quieta.'}
+  nota:'Apoya la mano en la cadera de arriba para notar si la pelvis se mueve. Debe quedarse quieta.'},
+ {id:'f4pie',tag:'Estiramiento',nombre:'Figura 4 de pie (apoyado en la pared)',
+  cam:{p:[2.6,1.5,2.4],t:[0,.85,.1]},xray:true,
+  dosis:['3 repeticiones','30 segundos cada una','Los dos lados'],
+  pasos:['De pie frente a una pared, apoya las manos en ella para mantener el equilibrio.','Cruza el tobillo de una pierna sobre la rodilla contraria.','Dobla poco a poco la rodilla de apoyo y lleva la cadera hacia atrás, como si fueras a sentarte.','Notarás el estiramiento en el glúteo de la pierna cruzada. Mantén sin rebotes y respira.'],
+  nota:'Es la versión para quien no puede tumbarse en el suelo. Si pierdes el equilibrio, acércate más a la pared.'},
+ {id:'abdpie',tag:'Fortalecer',nombre:'Abducción de cadera de pie',
+  cam:{p:[.6,1.4,3.6],t:[0,.85,0]},xray:true,
+  dosis:['2 o 3 series','12 a 15 repeticiones','Cada pierna'],
+  pasos:['De pie, con una mano apoyada en una pared o en el respaldo de una silla.','Con la rodilla estirada y la punta del pie al frente, separa una pierna hacia el lado.','Sube sin inclinar el tronco. Mantén 2 segundos.','Baja despacio y repite. Después cambia de pierna.'],
+  nota:'Trabaja el glúteo medio, que ayuda al piramidal a estabilizar la cadera. No dejes que la cadera de apoyo se desplace hacia el lado.'}
 ];
 
 /* ---------------- Escena ---------------- */
@@ -332,6 +343,9 @@ function applyPose(P){
   ['R','L'].forEach(k=>{const v=P.leg[k];
     if(v.fk){fk(legs[k],v.fk)}else{ik(legs[k],target(v.t),V3(v.pole),v.planta)}
     scene.updateMatrixWorld(true);setJ();});
+  if(P.ground){const A0=.93-.035-(L1+L2)*Math.cos(3*D),vv=new THREE.Vector3();
+    const ys=['L','R'].map(k=>legs[k].ankle.getWorldPosition(vv).y);root.position.y+=A0-Math.min(...ys);root.updateMatrixWorld(true);setJ();
+    ['R','L'].forEach(k=>{const v=P.leg[k];if(v.fk)fk(legs[k],v.fk)});scene.updateMatrixWorld(true);setJ()}
   ['R','L'].forEach(k=>{const v=P.arm&&P.arm[k];
     if(!v){arms[k].hip.rotation.set(0,0,0);arms[k].knee.rotation.set(0,0,0);arms[k].hip.rotation.z=arms[k].s*(P.armAbd||8)*D;return}
     if(v.fk){const ch=arms[k];ch.hip.rotation.order='XZY';ch.hip.rotation.set(-v.fk.f*D,0,0);ch.hip.rotation.z=ch.s*(v.fk.a||0)*D;ch.knee.rotation.set(-(v.fk.k||0)*D,0,0)}
@@ -352,6 +366,8 @@ function lerp(a,b,t,key){
 /* ---------------- Poses ---------------- */
 const PLANTA_SUPINO={z:[0,0,1],y:[0,1,0]};
 const supRoot={p:[0,.12,0],r:[-90,0,0]};
+const STANDP={root:{p:[0,.93,0],r:[0,0,0]},torso:0,ground:true,stand:true};
+const fkL=(f,a,r,k)=>({fk:{f:f,a:a,r:r,k:k}});
 const POSES={
  anat:{a:{root:{p:[0,.93,0],r:[0,0,0]},leg:{L:{fk:{f:0,a:3,r:0,k:0}},R:{fk:{f:0,a:3,r:0,k:0}}},arm:null}},
  f4:{
@@ -374,6 +390,12 @@ const POSES={
      arm:{L:{fk:{f:0,a:14,k:0}},R:{fk:{f:0,a:14,k:0}}}},
   b:{root:{p:[0,.31,-.04],r:[-110,0,0]},torso:0,neck:20,leg:{R:{t:[-.1,.05,.47],pole:[0,1,0],planta:PLANTA_SUPINO},L:{t:[.1,.05,.47],pole:[0,1,0],planta:PLANTA_SUPINO}},
      arm:{L:{fk:{f:0,a:14,k:0}},R:{fk:{f:0,a:14,k:0}}}}},
+ f4pie:{
+  a:Object.assign({},STANDP,{torso:6,leg:{R:fkL(10,3,0,20),L:fkL(70,38,45,105)},arm:{L:fkL(70,8,0,12),R:fkL(70,8,0,12)}}),
+  b:Object.assign({},STANDP,{torso:26,leg:{R:fkL(38,3,0,62),L:fkL(70,38,45,105)},arm:{L:fkL(78,8,0,12),R:fkL(78,8,0,12)}})},
+ abdpie:{
+  a:Object.assign({},STANDP,{leg:{R:fkL(0,3,0,0),L:fkL(0,3,0,0)},arm:{L:fkL(30,12,0,40),R:fkL(30,12,0,40)}}),
+  b:Object.assign({},STANDP,{leg:{R:fkL(0,3,0,0),L:fkL(0,36,0,0)},arm:{L:fkL(30,12,0,40),R:fkL(30,12,0,40)}})},
  almeja:{
   a:{root:{p:[0,.17,0],r:[0,90,-90]},torso:0,leg:{R:{t:[0,.27,.58],pole:[1,.1,.1],planta:null},L:{t:[0,.1,.58],pole:[1,.1,.1],planta:null}},arm:null},
   b:{root:{p:[0,.17,0],r:[0,90,-90]},torso:0,leg:{R:{t:[0,.27,.58],pole:[1,1.4,.1],planta:null},L:{t:[0,.1,.58],pole:[1,.1,.1],planta:null}},arm:null}}
@@ -391,7 +413,7 @@ function buildLabels(){labelsEl.innerHTML='';LABELS.forEach(([n,,c,o])=>{const d
   const len=Math.hypot(o[0],o[1]),ang=Math.atan2(o[1],o[0])*180/Math.PI;
   d.innerHTML='<u style="width:'+len+'px;transform:rotate('+ang+'deg)"></u><i></i><span style="transform:translate('+o[0]+'px,'+o[1]+'px) translate('+(o[0]<0?'-100%':'0')+',-50%)">'+n+'</span>';labelsEl.appendChild(d)})}
 buildLabels();
-const CORTO={anat:'Dónde está',f4:'Figura 4 tumbado',sent:'Figura 4 sentado',hombro:'Rodilla al hombro',puente:'Puente de glúteo',almeja:'Almeja'};
+const CORTO={f4pie:'Figura 4 de pie',abdpie:'Abducción de pie',anat:'Dónde está',f4:'Figura 4 tumbado',sent:'Figura 4 sentado',hombro:'Rodilla al hombro',puente:'Puente de glúteo',almeja:'Almeja'};
 const chipsEl=document.getElementById('chips');
 EJ.forEach(e=>{const c=document.createElement('button');c.type='button';c.className='chip';c.dataset.id=e.id;c.setAttribute('role','tab');c.textContent=CORTO[e.id];c.addEventListener('click',()=>select(e.id,true));chipsEl.appendChild(c)});
 function esc(x){return x.replace(/&/g,'&amp;').replace(/</g,'&lt;')}
@@ -407,7 +429,7 @@ function select(id,fromUser){
   cur=EJ.find(e=>e.id===id);
   document.querySelectorAll('.chip').forEach(c=>c.setAttribute('aria-selected',c.dataset.id===id));
   document.querySelectorAll('.item').forEach(it=>{const o=it.dataset.id===id;it.dataset.open=o;it.querySelector('button').setAttribute('aria-expanded',o);it.querySelector('.body').hidden=!o});
-  const P=POSES[id];chair.visible=id==='sent';mat.visible=id!=='anat'&&id!=='sent';
+  const P=POSES[id];const _st=!!(P.a&&P.a.stand);chair.visible=id==='sent';mat.visible=id!=='anat'&&id!=='sent'&&!_st;
   if(id==='anat'){mat.visible=false}
   t=0;dir=1;hold=0;xray=cur.xray;xrayBtn.setAttribute('aria-pressed',xray);
   controls.target.set(...cur.cam.t);camera.position.set(...cur.cam.p);if(stage.clientWidth/stage.clientHeight>1.25)camera.position.sub(controls.target).multiplyScalar(.92).add(controls.target);controls.update();
@@ -456,6 +478,37 @@ matchMedia('(prefers-color-scheme: dark)').addEventListener('change',themeChange
 new MutationObserver(themeChanged).observe(document.documentElement,{attributes:true,attributeFilter:['data-theme']});
 if(matchMedia('(prefers-reduced-motion: reduce)').matches)playing=false;
 resize();
+
+/* ---------------- Enviar por WhatsApp ---------------- */
+const CLINICA='Centro de Fisioterapia · Carlos Ortiz';
+const AVISO='Para en cuanto notes dolor y, si no se te quita, consúltanos.';
+function enlaceEj(id){return location.href.split('#')[0].split('?')[0]+'#'+id}
+function textoEj(e,solo){
+  let s='';
+  if(solo)s+='*'+CLINICA+'*\n\n';
+  s+='*'+e.nombre+'*'+(e.tag?' ('+e.tag.toLowerCase()+')':'')+'\n';
+  if(e.dosis)s+=e.dosis.join(' · ')+'\n';
+  if(e.pasos)s+='\n'+e.pasos.map((p,i)=>(i+1)+'. '+p).join('\n')+'\n';
+  if(e.nota)s+='\n_'+e.nota+'_\n';
+  s+='\nVer el movimiento en 3D: '+enlaceEj(e.id)+'\n';
+  if(solo)s+='\n'+AVISO;
+  return s;
+}
+function textoRutina(){
+  const lista=EJ.filter(e=>!e.fixed);
+  return '*'+CLINICA+'*\n*'+document.querySelector('header h1').textContent+'*\n\n'+lista.map((e,i)=>(i+1)+'. '+e.nombre+' — '+enlaceEj(e.id)).join('\n')+'\n\nAbre cada enlace para ver el ejercicio en 3D con sus pasos.\n'+AVISO;
+}
+function enviarWA(txt){window.open('https://wa.me/?text='+encodeURIComponent(txt),'_blank','noopener')}
+async function copiar(txt,btn){try{await navigator.clipboard.writeText(txt);const o=btn.textContent;btn.textContent='Copiado';setTimeout(()=>btn.textContent=o,1600)}catch(_){window.prompt('Copia el texto:',txt)}}
+document.querySelectorAll('.item').forEach(it=>{
+  const e=EJ.find(x=>x.id===it.dataset.id);if(!e||e.fixed)return;
+  const box=document.createElement('div');box.className='share';
+  box.innerHTML='<button type="button" class="btn wa">Enviar por WhatsApp</button><button type="button" class="btn cp">Copiar texto</button>';
+  box.querySelector('.wa').addEventListener('click',()=>enviarWA(textoEj(e,true)));
+  box.querySelector('.cp').addEventListener('click',ev=>copiar(textoEj(e,true),ev.target));
+  it.querySelector('.body').appendChild(box);
+});
+{const c=document.querySelector('.ctrl');const b=document.createElement('button');b.type='button';b.className='btn';b.textContent='Enviar rutina por WhatsApp';b.addEventListener('click',()=>enviarWA(textoRutina()));c.appendChild(b)}
 const first=(location.hash||'').slice(1);
 select(EJ.some(e=>e.id===first)?first:'anat',false);
 window.__dbg={setX:(v)=>{xray=v;draw()},select,draw,setT:(x)=>{t=x;playing=false;draw()},camera,controls,renderer,scene,J};
