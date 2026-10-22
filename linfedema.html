@@ -95,6 +95,8 @@ input[type=range]{flex:1;min-width:0;accent-color:var(--accent);height:28px}
 .warn b{display:block;margin-bottom:4px}
 footer{font-size:13px;color:var(--mut);max-width:80ch}
 @media (prefers-reduced-motion:reduce){*{scroll-behavior:auto!important}}
+.say{background:var(--surface)}#ill{position:absolute;inset:0;width:100%;height:100%;object-fit:contain;background:#fff;z-index:3}
+.share{display:flex;gap:8px;flex-wrap:wrap;margin-top:12px}.share .wa{background:#1f9d55;border-color:#1f9d55;color:#fff}.ctrl{flex-wrap:wrap}
 html{padding:env(safe-area-inset-top,0) 0 env(safe-area-inset-bottom,0)}body{margin:0}[hidden]{display:none!important}html.emb header h1{display:none}html.emb header p{margin-top:0}
 </style>
 
@@ -177,7 +179,15 @@ const EJ=[
  {id:'codo',tag:'Bombeo',nombre:'Doblar y estirar el codo',xray:false,cam:{p:[2.4,1.4,1.4],t:[0,.95,.25]},
   dosis:DOSIS,
   pasos:['Con el brazo al frente, a la altura del hombro.','Dobla el codo llevando la mano hacia el hombro.','Estira de nuevo el brazo, despacio.'],
-  nota:'Si cansa, apoya el brazo en una mesa con un cojín.'}
+  nota:'Si cansa, apoya el brazo en una mesa con un cojín.'},
+ {id:'pendulo',tag:'De pie',nombre:'Balanceo de brazos de pie',xray:false,cam:{p:[2.5,1.5,2.7],t:[0,.9,0]},
+  dosis:['10 balanceos por lado','Suaves y rítmicos'],
+  pasos:['De pie, con los pies separados a la anchura de la cadera y las rodillas ligeramente flexionadas.','Lleva un brazo hacia delante y el otro hacia atrás, como al caminar, con el codo casi estirado.','Cambia de brazo despacio, siguiendo el ritmo de la respiración.','No levantes el brazo por encima del hombro.'],
+  nota:'Si te mareas o te cansas, hazlo apoyando una mano en una pared o en el respaldo de una silla.'},
+ {id:'lateral',tag:'De pie',nombre:'Inclinación lateral con el brazo elevado',xray:false,cam:{p:[.5,1.7,3.9],t:[0,1.12,0]},
+  dosis:['8 repeticiones por lado','Mantén 3 segundos'],
+  pasos:['De pie, con los pies a la anchura de la cadera.','Sube el brazo afectado por encima de la cabeza, sin forzar.','Inclina el tronco hacia el lado contrario, como si quisieras alargar el costado.','Mantén tres segundos, respirando, y vuelve al centro despacio.'],
+  nota:'Notarás cómo se abre el costado y la axila. Que no duela y sin balancear el cuerpo.'}
 ];
 
 /* ---------------- Escena ---------------- */
@@ -335,7 +345,7 @@ function fk(ch,v){
 function applyPose(P){
   root.position.set(P.root.p[0],P.root.p[1],P.root.p[2]);
   root.rotation.set(P.root.r[0]*D,P.root.r[1]*D,P.root.r[2]*D,'YXZ');
-  torso.rotation.set((P.torso||0)*D,0,0);neckG.rotation.set((P.neck||0)*D,0,0);
+  torso.rotation.set((P.torso||0)*D,0,(P.lean||0)*D);neckG.rotation.set((P.neck||0)*D,0,0);
   const sh=P.shrug||0;['L','R'].forEach(k=>{arms[k].hip.position.y=.46+.075*sh;trapM[k].position.y=.5+.065*sh;trapM[k].scale.set(.095,.035+.02*sh,.075);const h=arms[k].hand,o=P.hand||0;h.scale.set(.05-.011*o,.09-.04*o,.02+.02*o);h.position.y=-.055+.02*o});neckG.position.y=.54-.025*sh;
   const br=P.breath||0;bellyM.scale.set(1+.12*br,1,.72*(1+.4*br)/.72);bellyM.scale.z=.72*(1+.4*br);chestM.scale.set(.19*(1+.07*br),.14*(1+.05*br),.125*(1+.22*br));
   root.updateMatrixWorld(true);setJ();
@@ -366,6 +376,9 @@ const SEAT={root:{p:[0,.5,0],r:[0,0,0]},torso:0,neck:0,shrug:0,breath:0,hand:0,
 const fkA=(f,a,r,k)=>({fk:{f:f,a:a,r:r,k:k}});
 const arms2=(f,a,r,k)=>({L:fkA(f,a,r,k),R:fkA(f,a,r,k)});
 const PS=(o)=>Object.assign({},SEAT,o);
+const STAND={root:{p:[0,.93,0],r:[0,0,0]},torso:0,neck:0,shrug:0,breath:0,hand:0,lean:0,stand:true,
+  leg:{R:{fk:{f:0,a:3,r:0,k:0}},L:{fk:{f:0,a:3,r:0,k:0}}}};
+const PD=(o)=>Object.assign({},STAND,o);
 const POSES={
  pautas:{a:PS({arm:arms2(0,8,0,0)})},
  resp:{
@@ -378,7 +391,13 @@ const POSES={
   a:PS({arm:{L:{t:[.06,1.27,-.1],pole:[.25,.15,1]},R:{t:[-.06,1.27,-.1],pole:[-.25,.15,1]}}}),
   b:PS({arm:{L:{t:[.06,1.27,-.1],pole:[1,.15,-.15]},R:{t:[-.06,1.27,-.1],pole:[-1,.15,-.15]}}})},
  bombeo:{a:PS({arm:arms2(105,6,0,25),hand:0}),b:PS({arm:arms2(105,6,0,25),hand:1})},
- codo:{a:PS({arm:arms2(90,6,0,0)}),b:PS({arm:arms2(90,6,0,125)})}
+ codo:{a:PS({arm:arms2(90,6,0,0)}),b:PS({arm:arms2(90,6,0,125)})},
+ pendulo:{
+  a:PD({arm:{L:fkA(38,6,0,12),R:fkA(-28,6,0,5)},leg:{R:{fk:{f:-4,a:4,r:0,k:6}},L:{fk:{f:8,a:4,r:0,k:10}}},torso:2}),
+  b:PD({arm:{L:fkA(-28,6,0,5),R:fkA(38,6,0,12)},leg:{R:{fk:{f:8,a:4,r:0,k:10}},L:{fk:{f:-4,a:4,r:0,k:6}}},torso:2})},
+ lateral:{
+  a:PD({arm:{L:fkA(172,12,0,0),R:fkA(0,8,0,0)}}),
+  b:PD({arm:{L:fkA(172,12,0,0),R:fkA(0,8,0,0)},lean:20})}
 };
 
 /* ---------------- Interfaz ---------------- */
@@ -393,7 +412,7 @@ function buildLabels(){labelsEl.innerHTML='';LABELS.forEach(([n,,c,o])=>{const d
   const len=Math.hypot(o[0],o[1]),ang=Math.atan2(o[1],o[0])*180/Math.PI;
   d.innerHTML='<u style="width:'+len+'px;transform:rotate('+ang+'deg)"></u><i></i><span style="transform:translate('+o[0]+'px,'+o[1]+'px) translate('+(o[0]<0?'-100%':'0')+',-50%)">'+n+'</span>';labelsEl.appendChild(d)})}
 buildLabels();
-const CORTO={pautas:'Antes de empezar',resp:'Respiración',hombros:'Hombros',frontal:'Brazos al frente',apertura:'Abrir brazos',nuca:'Manos a la nuca',bombeo:'Abrir y cerrar mano',codo:'Doblar el codo'};
+const CORTO={pendulo:'Balanceo de pie',lateral:'Inclinación lateral',pautas:'Antes de empezar',resp:'Respiración',hombros:'Hombros',frontal:'Brazos al frente',apertura:'Abrir brazos',nuca:'Manos a la nuca',bombeo:'Abrir y cerrar mano',codo:'Doblar el codo'};
 const chipsEl=document.getElementById('chips');
 EJ.forEach(e=>{const c=document.createElement('button');c.type='button';c.className='chip';c.dataset.id=e.id;c.setAttribute('role','tab');c.textContent=CORTO[e.id];c.addEventListener('click',()=>select(e.id,true));chipsEl.appendChild(c)});
 function esc(x){return x.replace(/&/g,'&amp;').replace(/</g,'&lt;')}
@@ -406,17 +425,18 @@ EJ.forEach(e=>{
   listEl.appendChild(it);
 });
 function select(id,fromUser){
+  if(typeof pararVoz==='function')pararVoz();
   cur=EJ.find(e=>e.id===id);
   document.querySelectorAll('.chip').forEach(c=>c.setAttribute('aria-selected',c.dataset.id===id));
   document.querySelectorAll('.item').forEach(it=>{const o=it.dataset.id===id;it.dataset.open=o;it.querySelector('button').setAttribute('aria-expanded',o);it.querySelector('.body').hidden=!o});
-  const P=POSES[id];chair.visible=true;mat.visible=false;
+  const P=POSES[id];chair.visible=!(P.a&&P.a.stand);mat.visible=false;
   t=0;dir=1;hold=0;xray=cur.xray;xrayBtn.setAttribute('aria-pressed',xray);
   controls.target.set(...cur.cam.t);camera.position.set(...cur.cam.p);if(stage.clientWidth/stage.clientHeight>1.25)camera.position.sub(controls.target).multiplyScalar(.92).add(controls.target);controls.update();
   labelsEl.style.display=cur.labels?'block':'none';
   const fixed=!!cur.fixed;seek.disabled=fixed;playBtn.disabled=fixed;
   if(fromUser&&!matchMedia('(prefers-reduced-motion: reduce)').matches)playing=!fixed;
   playBtn.textContent=playing?'Pausa':'Reproducir';playBtn.setAttribute('aria-pressed',playing);
-  draw();
+  draw();updIll();
   if(fromUser&&matchMedia('(max-width:860px)').matches)stage.scrollIntoView({behavior:'smooth',block:'nearest'});
 }
 function ease(x){return x<.5?2*x*x:1-Math.pow(-2*x+2,2)/2}
@@ -457,6 +477,74 @@ matchMedia('(prefers-color-scheme: dark)').addEventListener('change',themeChange
 new MutationObserver(themeChanged).observe(document.documentElement,{attributes:true,attributeFilter:['data-theme']});
 if(matchMedia('(prefers-reduced-motion: reduce)').matches)playing=false;
 resize();
+
+/* ---------------- Enviar por WhatsApp ---------------- */
+const CLINICA='Centro de Fisioterapia · Carlos Ortiz';
+const AVISO='Para en cuanto notes dolor y, si no se te quita, consúltanos.';
+function enlaceEj(id){return location.href.split('#')[0].split('?')[0]+'#'+id}
+function textoEj(e,solo){
+  let s='';
+  if(solo)s+='*'+CLINICA+'*\n\n';
+  s+='*'+e.nombre+'*'+(e.tag?' ('+e.tag.toLowerCase()+')':'')+'\n';
+  if(e.dosis)s+=e.dosis.join(' · ')+'\n';
+  if(e.pasos)s+='\n'+e.pasos.map((p,i)=>(i+1)+'. '+p).join('\n')+'\n';
+  if(e.nota)s+='\n_'+e.nota+'_\n';
+  s+='\nVer el movimiento en 3D: '+enlaceEj(e.id)+'\n';
+  if(solo)s+='\n'+AVISO;
+  return s;
+}
+function textoRutina(){
+  const lista=EJ.filter(e=>!e.fixed);
+  return '*'+CLINICA+'*\n*'+document.querySelector('header h1').textContent+'*\n\n'+lista.map((e,i)=>(i+1)+'. '+e.nombre+' — '+enlaceEj(e.id)).join('\n')+'\n\nAbre cada enlace para ver el ejercicio en 3D con sus pasos.\n'+AVISO;
+}
+function enviarWA(txt){window.open('https://wa.me/?text='+encodeURIComponent(txt),'_blank','noopener')}
+async function copiar(txt,btn){try{await navigator.clipboard.writeText(txt);const o=btn.textContent;btn.textContent='Copiado';setTimeout(()=>btn.textContent=o,1600)}catch(_){window.prompt('Copia el texto:',txt)}}
+document.querySelectorAll('.item').forEach(it=>{
+  const e=EJ.find(x=>x.id===it.dataset.id);if(!e||e.fixed)return;
+  const box=document.createElement('div');box.className='share';
+  box.innerHTML='<button type="button" class="btn wa">Enviar por WhatsApp</button><button type="button" class="btn cp">Copiar texto</button>';
+  box.querySelector('.wa').addEventListener('click',()=>enviarWA(textoEj(e,true)));
+  box.querySelector('.cp').addEventListener('click',ev=>copiar(textoEj(e,true),ev.target));
+  it.querySelector('.body').appendChild(box);
+});
+{const c=document.querySelector('.ctrl');const b=document.createElement('button');b.type='button';b.className='btn';b.textContent='Enviar rutina por WhatsApp';b.addEventListener('click',()=>enviarWA(textoRutina()));c.appendChild(b)}
+
+/* ---------------- Audio (voz del navegador) ---------------- */
+const TTS='speechSynthesis' in window;let hablando=false;
+function vozES(){const vs=speechSynthesis.getVoices();return vs.find(v=>/^es[-_]ES/i.test(v.lang))||vs.find(v=>/^es/i.test(v.lang))||null}
+function pararVoz(){if(!TTS)return;speechSynthesis.cancel();hablando=false;document.querySelectorAll('.say').forEach(b=>b.textContent='🔊 Escuchar')}
+function leerEj(e,btn){
+  if(!TTS)return;
+  if(hablando){pararVoz();return}
+  speechSynthesis.cancel();hablando=true;btn.textContent='⏹ Parar';
+  const partes=[e.nombre+'.'];
+  if(e.dosis)partes.push(e.dosis.join('. ')+'.');
+  if(e.pasos)e.pasos.forEach((p,i)=>partes.push('Paso '+(i+1)+'. '+p));
+  if(e.nota)partes.push(e.nota);
+  partes.forEach((t,i)=>{const u=new SpeechSynthesisUtterance(t);u.lang='es-ES';const v=vozES();if(v)u.voice=v;u.rate=.92;
+    if(i===partes.length-1)u.onend=()=>{hablando=false;btn.textContent='🔊 Escuchar'};u.onerror=()=>{hablando=false;btn.textContent='🔊 Escuchar'};
+    speechSynthesis.speak(u)});
+}
+if(TTS)speechSynthesis.getVoices();
+document.querySelectorAll('.item').forEach(it=>{
+  const e=EJ.find(x=>x.id===it.dataset.id);if(!e||!TTS)return;
+  const box=it.querySelector('.share')||(()=>{const d=document.createElement('div');d.className='share';it.querySelector('.body').appendChild(d);return d})();
+  const bt=document.createElement('button');bt.type='button';bt.className='btn say';bt.textContent='🔊 Escuchar';
+  bt.addEventListener('click',()=>leerEj(e,bt));box.insertBefore(bt,box.firstChild);
+});
+/* ---------------- Ilustraciones (opcional por ejercicio) ---------------- */
+const ILUS={};
+let verIlu=true;
+const stageEl=document.getElementById('stage');
+const ilImg=document.createElement('img');ilImg.id='ill';ilImg.alt='Ilustración del ejercicio';ilImg.hidden=true;stageEl.appendChild(ilImg);
+const ilBtn=document.createElement('button');ilBtn.type='button';ilBtn.className='btn';ilBtn.hidden=true;document.querySelector('.ctrl').appendChild(ilBtn);
+ilBtn.addEventListener('click',()=>{verIlu=!verIlu;updIll()});
+function updIll(){
+  const src=cur&&ILUS[cur.id];
+  ilBtn.hidden=!src;
+  if(!src){ilImg.hidden=true;return}
+  ilImg.src=src;ilImg.hidden=!verIlu;ilBtn.textContent=verIlu?'Ver en 3D':'Ver ilustración';
+}
 const first=(location.hash||'').slice(1);
 select(EJ.some(e=>e.id===first)?first:'pautas',false);
 window.__dbg={setX:(v)=>{xray=v;draw()},select,draw,setT:(x)=>{t=x;playing=false;draw()},camera,controls,renderer,scene,J};
