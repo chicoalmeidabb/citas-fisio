@@ -1659,8 +1659,9 @@ const vbtn={};['ilu','real','mun'].forEach(k=>{const b=document.createElement('b
 function vistaOk(k,id){return k==='mun'||(k==='ilu'&&!!ILUS[id])||(k==='real'&&REAL.has(id))}
 function vistaEf(id){for(const k of [vista,'ilu','real','mun'])if(vistaOk(k,id))return k}
 let reId=null;
-reFr.addEventListener('load',()=>{reMsg.hidden=true});
-window.addEventListener('message',e=>{if(e.data&&e.data.realReady)reMsg.hidden=true});
+let reT=null;function reFail(){reMsg.hidden=false;reMsg.innerHTML='No se ha podido cargar la figura realista.<br>Comprueba que <b>figura-real.html</b> está subido junto a esta página y que tienes conexión.<br><br><button type="button" class="btn" id="reMun" style="pointer-events:auto">Ver el muñeco 3D</button>';reMsg.querySelector('#reMun').onclick=()=>{vista='mun';updIll()}}
+reFr.addEventListener('load',()=>{if(reFr.contentDocument&&!reFr.contentDocument.getElementById('cv')){reFail();return}});
+window.addEventListener('message',e=>{if(e.data&&e.data.realReady){clearTimeout(reT);reMsg.hidden=true}});
 function updIll(){
   if(!cur)return;
   const id=cur.id,k=vistaEf(id);
@@ -1669,9 +1670,9 @@ function updIll(){
   for(const x in vbtn){vbtn[x].hidden=!vistaOk(x,id);vbtn[x].setAttribute('aria-pressed',x===k)}
   if(k==='ilu'){ilImg.src=ILUS[id];ilImg.hidden=false}else ilImg.hidden=true;
   if(k==='real'){
-    if(reId!==id){reId=id;reMsg.hidden=false;reFr.src='figura-real.html?embed#'+id}
+    if(reId!==id){reId=id;reMsg.textContent='Cargando la figura realista… (puede tardar unos segundos)';reMsg.hidden=false;reFr.src='figura-real.html?embed#'+id;clearTimeout(reT);reT=setTimeout(reFail,40000)}
     reFr.hidden=false;
-  }else{reFr.hidden=true;reMsg.hidden=true}
+  }else{reFr.hidden=true;reMsg.hidden=true;clearTimeout(reT);reId=null}
 }
 const first=(location.hash||'').slice(1);
 select(EJ.some(e=>e.id===first)?first:'anat',false);
