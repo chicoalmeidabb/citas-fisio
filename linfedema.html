@@ -98,6 +98,7 @@ footer{font-size:13px;color:var(--mut);max-width:80ch}
 .say{background:var(--surface)}#ill{position:absolute;inset:0;width:100%;height:100%;object-fit:contain;background:#fff;z-index:3}
 .share{display:flex;gap:8px;flex-wrap:wrap;margin-top:12px}.share .wa{background:#1f9d55;border-color:#1f9d55;color:#fff}.ctrl{flex-wrap:wrap}
 html{padding:env(safe-area-inset-top,0) 0 env(safe-area-inset-bottom,0)}body{margin:0}[hidden]{display:none!important}html.emb header h1{display:none}html.emb header p{margin-top:0}
+#realf{position:absolute;inset:0;width:100%;height:100%;border:0;background:#fff;z-index:3}#realmsg{position:absolute;inset:0;display:grid;place-items:center;text-align:center;padding:20px;background:#fff;color:#555;z-index:4;font-size:14px;pointer-events:none}.vsel{display:flex;gap:6px;flex-basis:100%;flex-wrap:wrap}.vsel .btn[aria-pressed=true]{background:var(--accent);border-color:var(--accent);color:var(--accent-ink)}
 </style>
 
 </head><body>
@@ -1588,7 +1589,7 @@ resize();
 /* ---------------- Enviar por WhatsApp ---------------- */
 const CLINICA='Centro de Fisioterapia · Carlos Ortiz';
 const AVISO='Para en cuanto notes dolor y, si no se te quita, consúltanos.';
-function enlaceEj(id){return location.href.split('#')[0].split('?')[0]+'#'+id}
+function enlaceEj(id){return location.href.split('#')[0].split('?')[0]+'?v='+vistaEf(id)+'#'+id}
 function textoEj(e,solo){
   let s='';
   if(solo)s+='*'+CLINICA+'*\n\n';
@@ -1641,16 +1642,33 @@ document.querySelectorAll('.item').forEach(it=>{
 });
 /* ---------------- Ilustraciones (opcional por ejercicio) ---------------- */
 const ILUS={};
-let verIlu=true;
+/* ---------------- Vistas: ilustración / figura realista / muñeco ---------------- */
+const REAL=new Set(['frontal','apertura','nuca','codo','pendulo','lateral']);
+const VN={ilu:'Ilustración',real:'Figura realista',mun:'Muñeco 3D'};
+let vista=(()=>{const q=(location.search.match(/[?&]v=(ilu|real|mun)/)||[])[1];if(q)return q;try{const s=localStorage.getItem('vistaFisio');if(s&&VN[s])return s}catch(_){}return 'ilu'})();
 const stageEl=document.getElementById('stage');
 const ilImg=document.createElement('img');ilImg.id='ill';ilImg.alt='Ilustración del ejercicio';ilImg.hidden=true;stageEl.appendChild(ilImg);
-const ilBtn=document.createElement('button');ilBtn.type='button';ilBtn.className='btn';ilBtn.hidden=true;document.querySelector('.ctrl').appendChild(ilBtn);
-ilBtn.addEventListener('click',()=>{verIlu=!verIlu;updIll()});
+const reFr=document.createElement('iframe');reFr.id='realf';reFr.title='Figura realista del ejercicio';reFr.hidden=true;reFr.setAttribute('loading','lazy');stageEl.appendChild(reFr);
+const reMsg=document.createElement('div');reMsg.id='realmsg';reMsg.textContent='Cargando la figura realista… (puede tardar unos segundos)';reMsg.hidden=true;stageEl.appendChild(reMsg);
+const vsel=document.createElement('div');vsel.className='vsel';vsel.setAttribute('role','group');vsel.setAttribute('aria-label','Tipo de imagen');
+const vbtn={};['ilu','real','mun'].forEach(k=>{const b=document.createElement('button');b.type='button';b.className='btn';b.textContent=VN[k];b.addEventListener('click',()=>{vista=k;try{localStorage.setItem('vistaFisio',k)}catch(_){}updIll()});vbtn[k]=b;vsel.appendChild(b)});
+{const c=document.querySelector('.ctrl');c.insertBefore(vsel,c.firstChild)}
+function vistaOk(k,id){return k==='mun'||(k==='ilu'&&!!ILUS[id])||(k==='real'&&REAL.has(id))}
+function vistaEf(id){for(const k of [vista,'ilu','real','mun'])if(vistaOk(k,id))return k}
+let reId=null;
+reFr.addEventListener('load',()=>{reMsg.hidden=true});
+window.addEventListener('message',e=>{if(e.data&&e.data.realReady)reMsg.hidden=true});
 function updIll(){
-  const src=cur&&ILUS[cur.id];
-  ilBtn.hidden=!src;
-  if(!src){ilImg.hidden=true;return}
-  ilImg.src=src;ilImg.hidden=!verIlu;ilBtn.textContent=verIlu?'Ver en 3D':'Ver ilustración';
+  if(!cur)return;
+  const id=cur.id,k=vistaEf(id);
+  const n=['ilu','real','mun'].filter(x=>vistaOk(x,id)).length;
+  vsel.hidden=n<2;
+  for(const x in vbtn){vbtn[x].hidden=!vistaOk(x,id);vbtn[x].setAttribute('aria-pressed',x===k)}
+  if(k==='ilu'){ilImg.src=ILUS[id];ilImg.hidden=false}else ilImg.hidden=true;
+  if(k==='real'){
+    if(reId!==id){reId=id;reMsg.hidden=false;reFr.src='figura-real.html?embed#'+id}
+    reFr.hidden=false;
+  }else{reFr.hidden=true;reMsg.hidden=true}
 }
 const first=(location.hash||'').slice(1);
 select(EJ.some(e=>e.id===first)?first:'pautas',false);
