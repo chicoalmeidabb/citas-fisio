@@ -439,7 +439,7 @@ tr.clk{cursor:pointer}tr.clk:hover{background:var(--blue-l)}
 /* =====================================================================
    Datos y utilidades
    ===================================================================== */
-const APP_VERSION='3.9', APP_BUILD='22/10/2026 11:20';
+const APP_VERSION='3.10', APP_BUILD='22/10/2026 15:01';
 const SESIONES=[{ini:9*60,fin:14*60},{ini:17*60,fin:21*60}];
 const PASO=15, CABINAS=['1','2','3','4'], MIN_DIA=CABINAS.length*((14-9)+(21-17))*60;
 const cabLarga=c=>String(c)==='4'?'Gimnasio':'Cabina '+c, cabCorta=c=>String(c)==='4'?'Gim.':'Cab. '+c, cabLetra=c=>String(c)==='4'?'G':String(c);
@@ -1452,7 +1452,8 @@ function verFactura(id){
 /* ---------- Ejercicios (visor 3D en un archivo aparte) ---------- */
 const EJERCICIOS=[
   {zona:'Cadera y glúteo',items:[{id:'piramidal',ico:'🦵',nombre:'Piramidal (piriforme)',desc:'5 ejercicios animados en 3D',archivo:'piramidal.html'}]},
-  {zona:'Zona lumbar',items:[]},{zona:'Cervical y hombro',items:[]},{zona:'Rodilla y tobillo',items:[]}
+  {zona:'Miembro superior',items:[{id:'linfedema',ico:'💪',nombre:'Brazo con linfedema',desc:'Rutina de 7 ejercicios en 3D',archivo:'linfedema.html'}]},
+  {zona:'Zona lumbar',items:[]},{zona:'Cervical',items:[]},{zona:'Rodilla y tobillo',items:[]}
 ];
 function vEjercicios(){
   return `<h2 class="vt">Ejercicios</h2>

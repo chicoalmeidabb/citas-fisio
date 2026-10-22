@@ -34,6 +34,29 @@ header p{margin:0;color:var(--mut);max-width:62ch}
 @media(max-width:860px){.stagebox{position:static}}
 .stage{position:relative;background:var(--stage);border:1px solid var(--line);border-radius:10px;overflow:hidden;aspect-ratio:4/3.2;touch-action:none}
 @media(max-width:520px){.stage{aspect-ratio:1/1;max-height:56vh}}
+/* Escenario grande y mandos pequeños */
+@media(min-width:861px){
+  .layout{grid-template-columns:minmax(0,2.3fr) minmax(0,1fr)}
+  .stage{aspect-ratio:auto;height:calc(100vh - 292px);min-height:320px}
+  html.emb .stage{height:calc(100vh - 250px)}
+  .wrap{max-width:1700px}
+  body{padding-block:12px 24px}
+  header h1{font-size:24px;margin-bottom:2px}
+  header p{font-size:13px}
+  .wrap{gap:12px}
+}
+.chip{font-size:12.5px;padding:3px 10px;min-height:30px}
+.chips{gap:6px}
+.btn{font-size:12.5px;padding:3px 12px;min-height:30px}
+.ctrl{gap:6px 10px;flex-wrap:nowrap}
+.ctrl .grow{flex:1 1 auto}
+.ctrl .grow span{font-size:11.5px}
+input[type=range]{height:20px}
+.legend{font-size:12px}
+.stagebox{gap:6px}
+.item h2{font-size:16px}
+.item>button{padding:9px 12px}
+.hint{font-size:11px}
 .stage canvas{display:block;width:100%;height:100%}
 .lbl{position:absolute;left:0;top:0;pointer-events:none;font-size:12.5px;font-weight:600;white-space:nowrap}
 .lbl i{position:absolute;left:-5px;top:-5px;width:10px;height:10px;border-radius:50%;background:currentColor;box-shadow:0 0 0 3px color-mix(in srgb,currentColor 28%,transparent)}
@@ -72,7 +95,7 @@ input[type=range]{flex:1;min-width:0;accent-color:var(--accent);height:28px}
 .warn b{display:block;margin-bottom:4px}
 footer{font-size:13px;color:var(--mut);max-width:80ch}
 @media (prefers-reduced-motion:reduce){*{scroll-behavior:auto!important}}
-html{padding:env(safe-area-inset-top,0) 0 env(safe-area-inset-bottom,0)}body{margin:0}html.emb header h1{display:none}html.emb header p{margin-top:0}
+html{padding:env(safe-area-inset-top,0) 0 env(safe-area-inset-bottom,0)}body{margin:0}[hidden]{display:none!important}html.emb header h1{display:none}html.emb header p{margin-top:0}
 </style>
 
 </head><body>
@@ -387,7 +410,7 @@ function select(id,fromUser){
   const P=POSES[id];chair.visible=id==='sent';mat.visible=id!=='anat'&&id!=='sent';
   if(id==='anat'){mat.visible=false}
   t=0;dir=1;hold=0;xray=cur.xray;xrayBtn.setAttribute('aria-pressed',xray);
-  camera.position.set(...cur.cam.p);controls.target.set(...cur.cam.t);controls.update();
+  controls.target.set(...cur.cam.t);camera.position.set(...cur.cam.p);if(stage.clientWidth/stage.clientHeight>1.25)camera.position.sub(controls.target).multiplyScalar(.92).add(controls.target);controls.update();
   labelsEl.style.display=cur.labels?'block':'none';
   const fixed=!!cur.fixed;seek.disabled=fixed;playBtn.disabled=fixed;
   if(fromUser&&!matchMedia('(prefers-reduced-motion: reduce)').matches)playing=!fixed;

@@ -1,0 +1,466 @@
+<!doctype html>
+<html lang="es"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<script>if(/[?&]app=1/.test(location.search)){document.documentElement.setAttribute('data-theme','light');document.documentElement.classList.add('emb')}</script>
+<title>Linfedema del brazo en 3D</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Public+Sans:wght@400;500;600&family=Quicksand:wght@600;700&display=swap">
+<style>
+/* Concepto: banco de trabajo de fisioterapia. Escenario 3D a la izquierda, lista de ejercicios a la derecha; el azul de la clínica guía y el rojo es solo para el músculo. */
+:root{
+  --bg:#f2f5f9; --surface:#ffffff; --ink:#14233a; --mut:#56677f; --line:#d5dde8;
+  --accent:#2569c4; --accent-ink:#ffffff; --stage:#e3e9f1; --floor:#d1dbea; --mat:#3f7fd0;
+  --body:#b4c3d8; --muscle:#d8443c; --nerve:#e3a517; --bone:#ece5d3;
+  --warn-bg:#fdeceb; --warn-ink:#7d1f1a;
+  --f-display:'Quicksand','Segoe UI',system-ui,sans-serif; --f-body:'Public Sans','Segoe UI',system-ui,sans-serif;
+}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]){
+  --bg:#0e1828; --surface:#152338; --ink:#e7eef8; --mut:#9bb0ca; --line:#2a4060;
+  --accent:#5ba3f5; --accent-ink:#0a1626; --stage:#0a1322; --floor:#17283f; --mat:#2a62ab;
+  --body:#7d92ad; --muscle:#ff6a5f; --nerve:#f2b830; --bone:#d9d1bb;
+  --warn-bg:#3a1a1a; --warn-ink:#ffb4ae; color-scheme:dark}}
+:root[data-theme="dark"]{
+  --bg:#0e1828; --surface:#152338; --ink:#e7eef8; --mut:#9bb0ca; --line:#2a4060;
+  --accent:#5ba3f5; --accent-ink:#0a1626; --stage:#0a1322; --floor:#17283f; --mat:#2a62ab;
+  --body:#7d92ad; --muscle:#ff6a5f; --nerve:#f2b830; --bone:#d9d1bb;
+  --warn-bg:#3a1a1a; --warn-ink:#ffb4ae; color-scheme:dark}
+*{box-sizing:border-box}
+body{background:var(--bg);color:var(--ink);font-family:var(--f-body);font-size:16px;line-height:1.55;
+  padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));padding-block:20px 40px}
+.wrap{max-width:1180px;margin:0 auto;display:grid;gap:20px}
+header h1{font-family:var(--f-display);font-weight:700;font-size:clamp(26px,4.2vw,38px);line-height:1.1;margin:0 0 6px;text-wrap:balance}
+header p{margin:0;color:var(--mut);max-width:62ch}
+.layout{display:grid;grid-template-columns:minmax(0,1.35fr) minmax(0,1fr);gap:20px;align-items:start}
+@media(max-width:860px){.layout{grid-template-columns:minmax(0,1fr)}}
+.stagebox{position:sticky;top:max(12px,env(safe-area-inset-top,0px));display:grid;gap:10px}
+@media(max-width:860px){.stagebox{position:static}}
+.stage{position:relative;background:var(--stage);border:1px solid var(--line);border-radius:10px;overflow:hidden;aspect-ratio:4/3.2;touch-action:none}
+@media(max-width:520px){.stage{aspect-ratio:1/1;max-height:56vh}}
+/* Escenario grande y mandos pequeños */
+@media(min-width:861px){
+  .layout{grid-template-columns:minmax(0,2.3fr) minmax(0,1fr)}
+  .stage{aspect-ratio:auto;height:calc(100vh - 292px);min-height:320px}
+  html.emb .stage{height:calc(100vh - 250px)}
+  .wrap{max-width:1700px}
+  body{padding-block:12px 24px}
+  header h1{font-size:24px;margin-bottom:2px}
+  header p{font-size:13px}
+  .wrap{gap:12px}
+}
+.chip{font-size:12.5px;padding:3px 10px;min-height:30px}
+.chips{gap:6px}
+.btn{font-size:12.5px;padding:3px 12px;min-height:30px}
+.ctrl{gap:6px 10px;flex-wrap:nowrap}
+.ctrl .grow{flex:1 1 auto}
+.ctrl .grow span{font-size:11.5px}
+input[type=range]{height:20px}
+.legend{font-size:12px}
+.stagebox{gap:6px}
+.item h2{font-size:16px}
+.item>button{padding:9px 12px}
+.hint{font-size:11px}
+.stage canvas{display:block;width:100%;height:100%}
+.lbl{position:absolute;left:0;top:0;pointer-events:none;font-size:12.5px;font-weight:600;white-space:nowrap}
+.lbl i{position:absolute;left:-5px;top:-5px;width:10px;height:10px;border-radius:50%;background:currentColor;box-shadow:0 0 0 3px color-mix(in srgb,currentColor 28%,transparent)}
+.lbl u{position:absolute;left:0;top:-1px;height:2px;background:currentColor;transform-origin:0 50%;opacity:.8}
+.lbl span{position:absolute;left:0;top:0;background:var(--surface);color:var(--ink);padding:2px 8px;border-radius:6px;border:1px solid var(--line)}
+.hint{position:absolute;left:12px;bottom:10px;font-size:12px;color:var(--mut);pointer-events:none}
+.ctrl{display:flex;flex-wrap:wrap;gap:10px 14px;align-items:center}
+.ctrl .grow{flex:1 1 180px;min-width:0;display:flex;align-items:center;gap:10px}
+.ctrl .grow span{font-size:12.5px;color:var(--mut);white-space:nowrap}
+input[type=range]{flex:1;min-width:0;accent-color:var(--accent);height:28px}
+.btn{font:inherit;font-weight:600;font-size:14px;color:var(--ink);background:var(--surface);border:1px solid var(--line);border-radius:8px;padding:8px 14px;cursor:pointer;min-height:40px}
+.btn:hover{border-color:var(--accent)}
+.btn[aria-pressed=true]{background:var(--accent);color:var(--accent-ink);border-color:var(--accent)}
+:focus-visible{outline:3px solid var(--accent);outline-offset:2px}
+.chips{display:flex;flex-wrap:wrap;gap:8px}
+.chip{font:inherit;font-weight:600;font-size:14px;color:var(--ink);background:var(--surface);border:1px solid var(--line);border-radius:999px;padding:8px 14px;min-height:40px;cursor:pointer}
+.chip:hover{border-color:var(--accent)}
+.chip[aria-selected=true]{background:var(--accent);color:var(--accent-ink);border-color:var(--accent)}
+.legend{display:flex;flex-wrap:wrap;gap:6px 16px;font-size:13px;color:var(--mut)}
+.legend b{display:inline-block;width:11px;height:11px;border-radius:3px;margin-right:6px;vertical-align:-1px}
+.list{display:grid;gap:8px}
+.item{background:var(--surface);border:1px solid var(--line);border-radius:10px;overflow:hidden}
+.item>button{all:unset;box-sizing:border-box;display:flex;gap:12px;align-items:center;width:100%;padding:12px 14px;cursor:pointer}
+.item>button:focus-visible{outline:3px solid var(--accent);outline-offset:-3px}
+.tag{font-size:11px;font-weight:600;letter-spacing:.06em;text-transform:uppercase;color:var(--mut);border:1px solid var(--line);border-radius:5px;padding:1px 7px;flex:none}
+.item h2{font-family:var(--f-display);font-size:18px;margin:0;font-weight:700;flex:1;min-width:0}
+.item[data-open=true]{border-color:var(--accent)}
+.item[data-open=true]>button{background:color-mix(in srgb,var(--accent) 9%,var(--surface))}
+.body{padding:4px 16px 16px;display:grid;gap:12px}
+.body[hidden]{display:none}
+.dose{display:flex;flex-wrap:wrap;gap:6px 18px;font-size:14px;font-weight:600;color:var(--accent)}
+.body p{margin:0}
+.body ol{margin:0;padding-left:1.25em;display:grid;gap:6px}
+.note{font-size:14px;color:var(--mut)}
+.warn{background:var(--warn-bg);color:var(--warn-ink);border-radius:10px;padding:14px 16px;font-size:14.5px}
+.warn b{display:block;margin-bottom:4px}
+footer{font-size:13px;color:var(--mut);max-width:80ch}
+@media (prefers-reduced-motion:reduce){*{scroll-behavior:auto!important}}
+html{padding:env(safe-area-inset-top,0) 0 env(safe-area-inset-bottom,0)}body{margin:0}[hidden]{display:none!important}html.emb header h1{display:none}html.emb header p{margin-top:0}
+</style>
+
+</head><body>
+<div class="wrap">
+  <header>
+    <h1>Rutina de ejercicios para el brazo con linfedema</h1>
+    <p>Un maniquí que se puede girar con el dedo o el ratón. Elige un ejercicio y mira el movimiento de principio a fin. La figura lleva la manga de compresión en el brazo izquierdo como ejemplo.</p>
+  </header>
+
+  <div class="layout">
+    <section class="stagebox" aria-label="Visor 3D">
+      <div class="stage" id="stage">
+        <canvas id="cv" aria-label="Figura 3D del ejercicio elegido"></canvas>
+        <div id="labels"></div>
+        <div class="hint">Arrastra para girar · pellizca o rueda para acercar</div>
+      </div>
+      <div class="chips" id="chips" role="tablist" aria-label="Elegir ejercicio"></div>
+      <div class="ctrl">
+        <button class="btn" id="play" aria-pressed="true">Pausa</button>
+        <button class="btn" id="xray" aria-pressed="false" hidden>Ver por dentro</button>
+        <div class="grow"><span>Inicio</span><input id="seek" type="range" min="0" max="1000" value="0" aria-label="Avance del ejercicio"><span>Final</span></div>
+      </div>
+      <div class="legend" aria-hidden="true">
+        <span><b style="background:var(--accent)"></b>Manga de compresión (brazo afectado)</span>
+      </div>
+    </section>
+
+    <section>
+      <div class="list" id="list"></div>
+    </section>
+  </div>
+
+  <div class="warn" role="note">
+    <b>Consulta sin esperar si el brazo se pone:</b>
+    más hinchado de golpe, rojo, caliente o doloroso, o si tienes fiebre. Puede ser una infección. Para los ejercicios en cuanto notes dolor, pesadez o más hinchazón. Esta rutina es una guía general: las repeticiones, la manga y cuándo empezar los decide tu fisioterapeuta según tu caso.
+  </div>
+  <footer>Figuras esquemáticas con fines educativos. El brazo afectado, el tipo de manga y los ejercicios adecuados dependen de cada persona.</footer>
+</div>
+
+<script src="three.min.js"></script>
+<script src="OrbitControls.js"></script>
+<script>
+(function(){
+const D=Math.PI/180, V3=(a)=>new THREE.Vector3(a[0],a[1],a[2]);
+
+/* ---------------- Contenido ---------------- */
+const DOSIS=['8 a 10 repeticiones','Lentas y sin dolor'];
+const EJ=[
+ {id:'pautas',tag:'Pautas',nombre:'Antes de empezar',fixed:true,xray:false,
+  cam:{p:[1.7,1.3,2.5],t:[0,.85,0]},
+  intro:'El linfedema es una hinchazón del brazo por acumulación de líquido linfático, muchas veces después de operar o irradiar los ganglios de la axila. Los ejercicios suaves y rítmicos, hechos con la manga de compresión si te la han pautado, ayudan a mover ese líquido.',
+  dosis:['Rutina completa: unos 15 minutos','Una o dos veces al día'],
+  pasos:['Empieza por la respiración y los hombros, y termina por la mano.','Haz todo lento, sin cargar peso ni hacer fuerza.','Descansa entre ejercicios y, al terminar, eleva el brazo unos minutos.','Para en cuanto notes dolor, pesadez o más hinchazón.'],
+  nota:'Elige un ejercicio de la lista para verlo en movimiento.'},
+ {id:'resp',tag:'Respiración',nombre:'Respiración abdominal',xray:false,cam:{p:[1.5,1.2,2.2],t:[0,.8,0]},
+  dosis:['5 respiraciones lentas','2 o 3 series'],
+  pasos:['Siéntate con la espalda recta y las manos sobre el abdomen.','Coge aire despacio por la nariz y deja que la barriga se hinche.','Suelta el aire despacio por la boca, notando cómo baja la barriga.','Haz una pausa corta entre respiraciones.'],
+  nota:'Es la base de la rutina: la respiración profunda ayuda a mover la linfa.'},
+ {id:'hombros',tag:'Movilidad',nombre:'Subir y bajar los hombros',xray:false,cam:{p:[1.0,1.3,2.4],t:[0,.9,0]},
+  dosis:['10 repeticiones','Lentas'],
+  pasos:['Siéntate con los brazos relajados a los lados.','Sube los hombros hacia las orejas mientras coges aire.','Mantén un segundo arriba.','Bájalos despacio mientras sueltas el aire.'],
+  nota:'Después puedes hacer círculos suaves con los hombros hacia atrás.'},
+ {id:'frontal',tag:'Movilidad',nombre:'Elevar los brazos al frente',xray:false,cam:{p:[2.0,1.5,2.3],t:[0,1.0,.1]},
+  dosis:DOSIS,
+  pasos:['Siéntate con la espalda recta y los brazos a los lados.','Sube los dos brazos hacia delante y arriba, estirados, hasta donde llegues sin dolor.','Mantén un segundo arriba.','Baja despacio.'],
+  nota:'No fuerces. Sube solo hasta donde no notes tirantez molesta.'},
+ {id:'apertura',tag:'Movilidad',nombre:'Abrir los brazos',xray:false,cam:{p:[.5,1.4,2.8],t:[0,.95,0]},
+  dosis:DOSIS,
+  pasos:['Parte con los brazos pegados al cuerpo.','Sepáralos hacia los lados, con las palmas hacia arriba, hasta la altura de los hombros o un poco más.','Baja despacio.'],
+  nota:'Mantén el cuello relajado y los hombros bajos.'},
+ {id:'nuca',tag:'Movilidad',nombre:'Manos a la nuca',xray:false,cam:{p:[.5,1.4,2.5],t:[0,1.0,0]},
+  dosis:DOSIS,
+  pasos:['Entrelaza las manos detrás de la cabeza, con los codos al frente.','Abre los codos hacia los lados, juntando los omóplatos.','Vuelve a cerrar los codos al frente, despacio.'],
+  nota:'Si no llegas con las manos a la nuca, ponlas sobre los hombros.'},
+ {id:'bombeo',tag:'Bombeo',nombre:'Abrir y cerrar la mano',xray:false,cam:{p:[2.0,1.5,1.9],t:[0,1.0,.2]},
+  dosis:['15 repeticiones','Con el brazo elevado'],
+  pasos:['Apoya el brazo elevado, por encima del nivel del corazón. Sirven unos cojines.','Abre la mano estirando bien los dedos.','Ciérrala en un puño suave.','Repite con un ritmo lento y constante.'],
+  nota:'Es el ejercicio que más ayuda a «bombear» el líquido hacia arriba.'},
+ {id:'codo',tag:'Bombeo',nombre:'Doblar y estirar el codo',xray:false,cam:{p:[2.4,1.4,1.4],t:[0,.95,.25]},
+  dosis:DOSIS,
+  pasos:['Con el brazo al frente, a la altura del hombro.','Dobla el codo llevando la mano hacia el hombro.','Estira de nuevo el brazo, despacio.'],
+  nota:'Si cansa, apoya el brazo en una mesa con un cojín.'}
+];
+
+/* ---------------- Escena ---------------- */
+const stage=document.getElementById('stage'), cv=document.getElementById('cv'), labelsEl=document.getElementById('labels');
+const renderer=new THREE.WebGLRenderer({canvas:cv,antialias:true,alpha:true});
+renderer.setPixelRatio(Math.min(window.devicePixelRatio||1,2));
+const scene=new THREE.Scene();
+const camera=new THREE.PerspectiveCamera(34,1,0.05,30);
+const controls=new THREE.OrbitControls(camera,cv);
+controls.enableDamping=true;controls.dampingFactor=0.08;controls.minDistance=0.8;controls.maxDistance=5;controls.maxPolarAngle=Math.PI*0.52;
+scene.add(new THREE.HemisphereLight(0xffffff,0x8899aa,0.9));
+const key=new THREE.DirectionalLight(0xffffff,0.85);key.position.set(2.2,3.5,2.5);scene.add(key);
+const fill=new THREE.DirectionalLight(0xffffff,0.35);fill.position.set(-2.5,1.5,-2);scene.add(fill);
+
+const col=(n)=>getComputedStyle(document.documentElement).getPropertyValue(n).trim();
+const M={
+  body:new THREE.MeshStandardMaterial({roughness:.7,metalness:0,transparent:true}),
+  joint:new THREE.MeshStandardMaterial({roughness:.7,metalness:0,transparent:true}),
+  bone:new THREE.MeshStandardMaterial({roughness:.6,transparent:true}),
+  muscle:new THREE.MeshStandardMaterial({roughness:.55,emissive:0x000000}),
+  nerve:new THREE.MeshStandardMaterial({roughness:.5}),
+  floor:new THREE.MeshBasicMaterial(),
+  mat:new THREE.MeshStandardMaterial({roughness:.9}),
+  chair:new THREE.MeshStandardMaterial({roughness:.8}),
+  sleeve:new THREE.MeshStandardMaterial({roughness:.6})
+};
+function applyTheme(){
+  M.body.color.set(col('--body'));M.joint.color.set(col('--body')).multiplyScalar(.92);
+  M.bone.color.set(col('--bone'));M.muscle.color.set(col('--muscle'));M.nerve.color.set(col('--nerve'));
+  M.floor.color.set(col('--floor'));M.mat.color.set(col('--mat'));M.chair.color.set(col('--mut'));M.sleeve.color.set(col('--accent'));
+}
+const G=(geo,mat)=>new THREE.Mesh(geo,mat);
+const grp=()=>new THREE.Group();
+
+/* Maniquí */
+const L1=0.43,L2=0.42,A1=0.30,A2=0.27;
+const root=grp();scene.add(root);
+const pelvisMesh=G(new THREE.SphereGeometry(1,24,16),M.body);pelvisMesh.scale.set(.175,.105,.115);root.add(pelvisMesh);
+let neckG,bellyM,chestM;const trapM={};const torso=grp();torso.position.set(0,.06,0);root.add(torso);
+{const t=G(new THREE.CylinderGeometry(.165,.14,.44,24,1),M.body);t.position.y=.22;t.scale.z=.72;torso.add(t);bellyM=t;
+ const ch=G(new THREE.SphereGeometry(1,24,16),M.body);ch.scale.set(.19,.14,.125);ch.position.y=.44;torso.add(ch);chestM=ch;
+ neckG=grp();neckG.position.y=.54;torso.add(neckG);
+ const nk=G(new THREE.CylinderGeometry(.04,.045,.1,12),M.joint);nk.position.y=.05;neckG.add(nk);
+ const hd=G(new THREE.SphereGeometry(1,24,18),M.body);hd.scale.set(.085,.105,.1);hd.position.set(0,.16,.01);neckG.add(hd);}
+[['L',1],['R',-1]].forEach(([k,sg])=>{const tp=G(new THREE.SphereGeometry(1,16,12),M.body);tp.position.set(sg*.13,.5,-.005);tp.scale.set(.095,.035,.075);tp.rotation.z=-sg*.35;torso.add(tp);trapM[k]=tp});
+function limb(len,r1,r2,mat){const c=G(new THREE.CylinderGeometry(r1,r2,len,16),mat);c.position.y=-len/2;return c}
+function ball(r,mat){return G(new THREE.SphereGeometry(r,14,12),mat)}
+const legs={};
+[['L',1],['R',-1]].forEach(([k,s])=>{
+  const hip=grp();hip.position.set(s*.09,-.035,0);hip.rotation.order='XZY';root.add(hip);
+  hip.add(ball(.07,M.joint));hip.add(limb(L1,.07,.052,M.body));
+  const knee=grp();knee.position.y=-L1;hip.add(knee);
+  knee.add(ball(.052,M.joint));knee.add(limb(L2,.05,.036,M.body));
+  const ankle=grp();ankle.position.y=-L2;knee.add(ankle);
+  ankle.add(ball(.038,M.joint));
+  const foot=G(new THREE.BoxGeometry(.085,.05,.21),M.body);foot.position.set(0,-.035,.055);ankle.add(foot);
+  /* marcadores internos */
+  const troc=new THREE.Object3D();troc.position.set(s*.065,-.03,-.04);hip.add(troc);
+  const n1=new THREE.Object3D();n1.position.set(s*.035,-.085,-.052);hip.add(n1);
+  const n2=new THREE.Object3D();n2.position.set(s*.005,-.25,-.05);hip.add(n2);
+  const n3=new THREE.Object3D();n3.position.set(0,-.4,-.045);hip.add(n3);
+  const nk=new THREE.Object3D();nk.position.set(0,-.045,-.04);knee.add(nk);
+  const femur=G(new THREE.CylinderGeometry(.018,.016,L1+.02,10),M.bone);femur.position.y=-L1/2;hip.add(femur);
+  const head=ball(.034,M.bone);hip.add(head);
+  const neck=G(new THREE.CylinderGeometry(.015,.015,.07,8),M.bone);neck.position.set(s*.03,-.01,0);neck.rotation.z=-s*1.25;hip.add(neck);
+  const gt=ball(.024,M.bone);gt.position.copy(troc.position);hip.add(gt);
+  legs[k]={s,hip,knee,ankle,troc,n1,n2,n3,nk,len:[L1,L2],sign:1,internal:[femur,head,neck,gt]};
+});
+const arms={};
+[['L',1],['R',-1]].forEach(([k,s])=>{
+  const sh=grp();sh.position.set(s*.205,.46,0);sh.rotation.order='XZY';torso.add(sh);
+  sh.add(ball(.052,M.joint));sh.add(limb(A1,.045,.036,M.body));
+  const el=grp();el.position.y=-A1;sh.add(el);
+  el.add(ball(.036,M.joint));el.add(limb(A2,.035,.027,M.body));
+  const wr=grp();wr.position.y=-A2;el.add(wr);const hand=ball(1,M.joint);hand.scale.set(.05,.09,.02);hand.position.y=-.055;wr.add(hand);
+  if(k==='L'){const m1=G(new THREE.CylinderGeometry(.053,.043,A1*.96,20),M.sleeve);m1.position.y=-A1*.49;sh.add(m1);
+    const m2=G(new THREE.CylinderGeometry(.043,.034,A2*.96,20),M.sleeve);m2.position.y=-A2*.49;el.add(m2);}
+  arms[k]={s,hip:sh,knee:el,ankle:wr,hand,len:[A1,A2],sign:-1};
+});
+/* Pelvis interna */
+const internal=grp();root.add(internal);
+const sacrum=G(new THREE.SphereGeometry(1,14,10),M.bone);sacrum.scale.set(.05,.085,.025);sacrum.position.set(0,.0,-.075);sacrum.rotation.x=.35;internal.add(sacrum);
+[1,-1].forEach(s=>{const il=G(new THREE.SphereGeometry(1,14,10),M.bone);il.scale.set(.018,.075,.085);il.position.set(s*.125,.035,-.015);il.rotation.z=s*.3;internal.add(il);
+  const is=G(new THREE.SphereGeometry(1,12,8),M.bone);is.scale.set(.02,.04,.04);is.position.set(s*.085,-.055,-.04);internal.add(is);});
+const orig={L:new THREE.Object3D(),R:new THREE.Object3D()},fora={L:new THREE.Object3D(),R:new THREE.Object3D()};
+[['L',1],['R',-1]].forEach(([k,s])=>{orig[k].position.set(s*.03,-.005,-.068);root.add(orig[k]);fora[k].position.set(s*.06,-.045,-.083);root.add(fora[k]);
+  const nr=new THREE.Object3D();nr.position.set(s*.032,-.045,-.065);root.add(nr);orig[k+'n']=nr;
+  const nr2=new THREE.Object3D();nr2.position.set(s*.065,-.07,-.07);root.add(nr2);orig[k+'n2']=nr2;});
+const musc={},nerv={};
+['L','R'].forEach(k=>{musc[k]=new THREE.Mesh(new THREE.BufferGeometry(),M.muscle);nerv[k]=new THREE.Mesh(new THREE.BufferGeometry(),M.nerve);scene.add(musc[k],nerv[k])});
+function tube(pts,r,seg,mesh){const c=new THREE.CatmullRomCurve3(pts,false,'catmullrom',.5);const g=new THREE.TubeGeometry(c,seg,r,8,false);mesh.geometry.dispose();mesh.geometry=g}
+const wp=(o)=>{o.updateWorldMatrix(true,false);return o.getWorldPosition(new THREE.Vector3())};
+function updateInternal(){
+  ['L','R'].forEach(k=>{const l=legs[k];
+    tube([wp(orig[k]),wp(fora[k]),wp(l.troc)],.017,14,musc[k]);
+    tube([wp(orig[k+'n']),wp(orig[k+'n2']),wp(l.n1),wp(l.n2),wp(l.n3),wp(l.nk)],.0075,24,nerv[k]);});
+}
+/* Suelo, esterilla, silla */
+const floor=G(new THREE.CircleGeometry(2.4,64),M.floor);floor.rotation.x=-Math.PI/2;floor.position.y=-.002;scene.add(floor);
+const mat=G(new THREE.BoxGeometry(.62,.02,2.0),M.mat);mat.position.set(0,.01,.15);scene.add(mat);
+const chair=grp();scene.add(chair);
+{const seat=G(new THREE.BoxGeometry(.46,.04,.44),M.chair);seat.position.set(0,.44,-.02);chair.add(seat);
+ const back=G(new THREE.BoxGeometry(.46,.4,.03),M.chair);back.position.set(0,.66,-.235);chair.add(back);
+ [[-.2,-.2],[.2,-.2],[-.2,.17],[.2,.17]].forEach(([x,z])=>{const l=G(new THREE.BoxGeometry(.035,.42,.035),M.chair);l.position.set(x,.21,z);chair.add(l)});}
+
+/* ---------------- Cinemática ---------------- */
+const J={};
+function setJ(){
+  const names=[['hipL',legs.L.hip],['hipR',legs.R.hip],['kneeL',legs.L.knee],['kneeR',legs.R.knee],['ankleL',legs.L.ankle],['ankleR',legs.R.ankle],
+    ['shL',arms.L.hip],['shR',arms.R.hip],['elL',arms.L.knee],['elR',arms.R.knee]];
+  names.forEach(([n,o])=>{J[n]=wp(o)});
+}
+function target(t){
+  if(t.mix)return target(t.mix[0]).lerp(target(t.mix[1]),t.mix[2]);
+  if(Array.isArray(t))return V3(t);
+  if(t.mid){return J[t.mid[0]].clone().add(J[t.mid[1]]).multiplyScalar(.5).add(V3(t.o||[0,0,0]))}
+  return J[t.j].clone().add(V3(t.o||[0,0,0]));
+}
+function basisQuat(x,y,z){const m=new THREE.Matrix4().makeBasis(x,y,z);return new THREE.Quaternion().setFromRotationMatrix(m)}
+function ik(ch,tg,pole,planta){
+  const par=ch.hip.parent;par.updateWorldMatrix(true,false);
+  const H=ch.hip.getWorldPosition(new THREE.Vector3()), [a,b]=ch.len, s=ch.sign;
+  let d=tg.clone().sub(H);let D=d.length();const dh=d.clone().normalize();
+  D=Math.min(Math.max(D,Math.abs(a-b)+1e-3),a+b-1e-3);
+  const A=H.clone().add(dh.clone().multiplyScalar(D));
+  let p=pole.clone();p.sub(dh.clone().multiplyScalar(p.dot(dh)));
+  if(p.lengthSq()<1e-6)p.set(0,1,0).sub(dh.clone().multiplyScalar(dh.y));
+  p.normalize();
+  const ca=(a*a+D*D-b*b)/(2*a*D), al=Math.acos(Math.min(1,Math.max(-1,ca)));
+  const K=H.clone().add(dh.clone().multiplyScalar(a*Math.cos(al))).add(p.clone().multiplyScalar(a*Math.sin(al)));
+  const u=K.clone().sub(H).normalize(), w=A.clone().sub(K).normalize();
+  let c=Math.min(1,Math.max(-1,u.dot(w))), th=Math.acos(c), sn=Math.sin(th);
+  const Y=u.clone().negate();
+  let Z=sn>1e-3? u.clone().multiplyScalar(c).sub(w).multiplyScalar(s/sn) : p.clone().multiplyScalar(s);
+  Z.sub(Y.clone().multiplyScalar(Z.dot(Y))).normalize();
+  const X=new THREE.Vector3().crossVectors(Y,Z);
+  const Q=basisQuat(X,Y,Z);
+  const pq=par.getWorldQuaternion(new THREE.Quaternion());
+  ch.hip.quaternion.copy(pq.clone().invert().multiply(Q));
+  ch.knee.rotation.set(s*th,0,0);
+  if(planta){ /* pie plano: la punta apunta a planta.z con la planta hacia planta.y */
+    ch.knee.updateWorldMatrix(true,false);
+    const sq=ch.knee.getWorldQuaternion(new THREE.Quaternion());
+    const fz=V3(planta.z).normalize(), fy=V3(planta.y).normalize(), fx=new THREE.Vector3().crossVectors(fy,fz);
+    const Qf=basisQuat(fx,new THREE.Vector3().crossVectors(fz,fx),fz);
+    ch.ankle.quaternion.copy(sq.invert().multiply(Qf));
+  }else ch.ankle.quaternion.identity();
+}
+function fk(ch,v){
+  ch.hip.rotation.order='XZY';
+  ch.hip.rotation.set(-v.f*D,0,0);ch.hip.rotation.z=ch.s*v.a*D;ch.hip.rotation.y=ch.s*(v.r||0)*D;
+  ch.hip.rotation.x=-v.f*D;
+  ch.knee.rotation.set((v.k||0)*D,0,0);ch.ankle.quaternion.identity();
+}
+function applyPose(P){
+  root.position.set(P.root.p[0],P.root.p[1],P.root.p[2]);
+  root.rotation.set(P.root.r[0]*D,P.root.r[1]*D,P.root.r[2]*D,'YXZ');
+  torso.rotation.set((P.torso||0)*D,0,0);neckG.rotation.set((P.neck||0)*D,0,0);
+  const sh=P.shrug||0;['L','R'].forEach(k=>{arms[k].hip.position.y=.46+.075*sh;trapM[k].position.y=.5+.065*sh;trapM[k].scale.set(.095,.035+.02*sh,.075);const h=arms[k].hand,o=P.hand||0;h.scale.set(.05-.011*o,.09-.04*o,.02+.02*o);h.position.y=-.055+.02*o});neckG.position.y=.54-.025*sh;
+  const br=P.breath||0;bellyM.scale.set(1+.12*br,1,.72*(1+.4*br)/.72);bellyM.scale.z=.72*(1+.4*br);chestM.scale.set(.19*(1+.07*br),.14*(1+.05*br),.125*(1+.22*br));
+  root.updateMatrixWorld(true);setJ();
+  ['R','L'].forEach(k=>{const v=P.leg[k];
+    if(v.fk){fk(legs[k],v.fk)}else{ik(legs[k],target(v.t),V3(v.pole),v.planta)}
+    scene.updateMatrixWorld(true);setJ();});
+  ['R','L'].forEach(k=>{const v=P.arm&&P.arm[k];
+    if(!v){arms[k].hip.rotation.set(0,0,0);arms[k].knee.rotation.set(0,0,0);arms[k].hip.rotation.z=arms[k].s*(P.armAbd||8)*D;return}
+    if(v.fk){const ch=arms[k];ch.hip.rotation.order='XZY';ch.hip.rotation.set(-v.fk.f*D,0,0);ch.hip.rotation.z=ch.s*(v.fk.a||0)*D;ch.hip.rotation.y=ch.s*(v.fk.r||0)*D;ch.knee.rotation.set(-(v.fk.k||0)*D,0,0)}
+    else{ik(arms[k],target(v.t),V3(v.pole),null)}
+    scene.updateMatrixWorld(true)});
+  scene.updateMatrixWorld(true);
+}
+const isTg=(x)=>x&&(Array.isArray(x)||x.j||x.mid);
+function lerp(a,b,t,key){
+  if(key==='t'&&isTg(a)&&isTg(b))return {mix:[a,b,t]};
+  if(a===null||b===null||b===undefined)return t<.8?a:b;
+  if(typeof a==='number')return a+(b-a)*t;
+  if(Array.isArray(a))return a.map((x,i)=>lerp(x,b[i],t));
+  if(a&&typeof a==='object'){const o={};for(const k in a)o[k]=(k in b)?lerp(a[k],b[k],t,k):a[k];return o}
+  return a;
+}
+
+/* ---------------- Poses (sentado en una silla) ---------------- */
+const PLANTA={z:[0,0,1],y:[0,1,0]};
+const SEAT={root:{p:[0,.5,0],r:[0,0,0]},torso:0,neck:0,shrug:0,breath:0,hand:0,
+  leg:{R:{t:[-.13,.05,.36],pole:[0,1,.3],planta:PLANTA},L:{t:[.13,.05,.36],pole:[0,1,.3],planta:PLANTA}}};
+const fkA=(f,a,r,k)=>({fk:{f:f,a:a,r:r,k:k}});
+const arms2=(f,a,r,k)=>({L:fkA(f,a,r,k),R:fkA(f,a,r,k)});
+const PS=(o)=>Object.assign({},SEAT,o);
+const POSES={
+ pautas:{a:PS({arm:arms2(0,8,0,0)})},
+ resp:{
+  a:PS({arm:{L:{t:[.075,.68,.13],pole:[1,-.3,-.3]},R:{t:[-.075,.68,.13],pole:[-1,-.3,-.3]}},breath:0}),
+  b:PS({arm:{L:{t:[.08,.70,.19],pole:[1,-.3,-.3]},R:{t:[-.08,.70,.19],pole:[-1,-.3,-.3]}},breath:1})},
+ hombros:{a:PS({arm:arms2(0,8,0,0),shrug:0}),b:PS({arm:arms2(0,8,0,0),shrug:1})},
+ frontal:{a:PS({arm:arms2(0,6,0,0)}),b:PS({arm:arms2(165,6,0,0)})},
+ apertura:{a:PS({arm:arms2(0,8,0,0)}),b:PS({arm:arms2(0,125,60,0)})},
+ nuca:{
+  a:PS({arm:{L:{t:[.06,1.27,-.1],pole:[.25,.15,1]},R:{t:[-.06,1.27,-.1],pole:[-.25,.15,1]}}}),
+  b:PS({arm:{L:{t:[.06,1.27,-.1],pole:[1,.15,-.15]},R:{t:[-.06,1.27,-.1],pole:[-1,.15,-.15]}}})},
+ bombeo:{a:PS({arm:arms2(105,6,0,25),hand:0}),b:PS({arm:arms2(105,6,0,25),hand:1})},
+ codo:{a:PS({arm:arms2(90,6,0,0)}),b:PS({arm:arms2(90,6,0,125)})}
+};
+
+/* ---------------- Interfaz ---------------- */
+const listEl=document.getElementById('list'), playBtn=document.getElementById('play'), xrayBtn=document.getElementById('xray'), seek=document.getElementById('seek');
+let cur=null, t=0, dir=1, playing=true, hold=0, xray=true, user=false;
+const LABELS=[
+ ['Piramidal',()=>wp(fora.L).lerp(wp(orig.L),.45),'var(--muscle)',[80,-70]],
+ ['Nervio ciático',()=>wp(legs.L.n2),'var(--nerve)',[70,10]],
+ ['Sacro',()=>wp(sacrum),'var(--ink)',[-10,-85]],
+ ['Trocánter mayor',()=>wp(legs.R.troc),'var(--ink)',[-70,55]]];
+function buildLabels(){labelsEl.innerHTML='';LABELS.forEach(([n,,c,o])=>{const d=document.createElement('div');d.className='lbl';d.style.color=c;
+  const len=Math.hypot(o[0],o[1]),ang=Math.atan2(o[1],o[0])*180/Math.PI;
+  d.innerHTML='<u style="width:'+len+'px;transform:rotate('+ang+'deg)"></u><i></i><span style="transform:translate('+o[0]+'px,'+o[1]+'px) translate('+(o[0]<0?'-100%':'0')+',-50%)">'+n+'</span>';labelsEl.appendChild(d)})}
+buildLabels();
+const CORTO={pautas:'Antes de empezar',resp:'Respiración',hombros:'Hombros',frontal:'Brazos al frente',apertura:'Abrir brazos',nuca:'Manos a la nuca',bombeo:'Abrir y cerrar mano',codo:'Doblar el codo'};
+const chipsEl=document.getElementById('chips');
+EJ.forEach(e=>{const c=document.createElement('button');c.type='button';c.className='chip';c.dataset.id=e.id;c.setAttribute('role','tab');c.textContent=CORTO[e.id];c.addEventListener('click',()=>select(e.id,true));chipsEl.appendChild(c)});
+function esc(x){return x.replace(/&/g,'&amp;').replace(/</g,'&lt;')}
+EJ.forEach(e=>{
+  const it=document.createElement('div');it.className='item';it.dataset.id=e.id;it.dataset.open='false';
+  const dosis=e.dosis?'<div class="dose">'+e.dosis.map(x=>'<span>'+esc(x)+'</span>').join('')+'</div>':'';
+  const pasos=e.pasos?'<ol>'+e.pasos.map(x=>'<li>'+esc(x)+'</li>').join('')+'</ol>':'';
+  it.innerHTML='<button type="button" aria-expanded="false"><span class="tag">'+e.tag+'</span><h2>'+esc(e.nombre)+'</h2></button><div class="body" hidden>'+(e.intro?'<p>'+esc(e.intro)+'</p>':'')+dosis+pasos+(e.nota?'<p class="note">'+esc(e.nota)+'</p>':'')+'</div>';
+  it.querySelector('button').addEventListener('click',()=>select(e.id,true));
+  listEl.appendChild(it);
+});
+function select(id,fromUser){
+  cur=EJ.find(e=>e.id===id);
+  document.querySelectorAll('.chip').forEach(c=>c.setAttribute('aria-selected',c.dataset.id===id));
+  document.querySelectorAll('.item').forEach(it=>{const o=it.dataset.id===id;it.dataset.open=o;it.querySelector('button').setAttribute('aria-expanded',o);it.querySelector('.body').hidden=!o});
+  const P=POSES[id];chair.visible=true;mat.visible=false;
+  t=0;dir=1;hold=0;xray=cur.xray;xrayBtn.setAttribute('aria-pressed',xray);
+  controls.target.set(...cur.cam.t);camera.position.set(...cur.cam.p);if(stage.clientWidth/stage.clientHeight>1.25)camera.position.sub(controls.target).multiplyScalar(.92).add(controls.target);controls.update();
+  labelsEl.style.display=cur.labels?'block':'none';
+  const fixed=!!cur.fixed;seek.disabled=fixed;playBtn.disabled=fixed;
+  if(fromUser&&!matchMedia('(prefers-reduced-motion: reduce)').matches)playing=!fixed;
+  playBtn.textContent=playing?'Pausa':'Reproducir';playBtn.setAttribute('aria-pressed',playing);
+  draw();
+  if(fromUser&&matchMedia('(max-width:860px)').matches)stage.scrollIntoView({behavior:'smooth',block:'nearest'});
+}
+function ease(x){return x<.5?2*x*x:1-Math.pow(-2*x+2,2)/2}
+function draw(){
+  const P=POSES[cur.id];const pose=P.b?lerp(P.a,P.b,ease(t)):P.a;
+  applyPose(pose);
+  const vis=xray;
+  [M.body,M.joint].forEach(m=>{m.opacity=vis?.42:1;m.depthWrite=!vis});
+  internal.visible=vis;['L','R'].forEach(k=>{legs[k].internal.forEach(o=>o.visible=vis);musc[k].visible=vis;nerv[k].visible=vis});
+  if(vis)updateInternal();
+  seek.value=Math.round(t*1000);
+}
+seek.addEventListener('input',()=>{playing=false;playBtn.textContent='Reproducir';playBtn.setAttribute('aria-pressed',false);t=seek.value/1000;draw()});
+playBtn.addEventListener('click',()=>{playing=!playing;playBtn.textContent=playing?'Pausa':'Reproducir';playBtn.setAttribute('aria-pressed',playing)});
+xrayBtn.addEventListener('click',()=>{xray=!xray;xrayBtn.setAttribute('aria-pressed',xray);draw()});
+function resize(){const w=stage.clientWidth,h=stage.clientHeight;renderer.setSize(w,h,false);camera.aspect=w/h;camera.updateProjectionMatrix()}
+new ResizeObserver(resize).observe(stage);
+const clock=new THREE.Clock();
+function frame(){
+  const dt=Math.min(clock.getDelta(),.05);
+  if(playing&&cur&&!cur.fixed){
+    if(hold>0)hold-=dt;else{t+=dir*dt/2.6;if(t>=1){t=1;dir=-1;hold=1.1}else if(t<=0){t=0;dir=1;hold=.8}}
+    draw();
+  }
+  controls.update();
+  renderer.render(scene,camera);
+  if(cur&&cur.labels){
+    const w=stage.clientWidth,h=stage.clientHeight;
+    LABELS.forEach(([,fn],i)=>{const v=fn().project(camera);const el=labelsEl.children[i];
+      el.style.transform='translate('+((v.x*.5+.5)*w)+'px,'+((-v.y*.5+.5)*h)+'px)';
+      el.style.display=v.z<1?'flex':'none'});
+  }
+  requestAnimationFrame(frame);
+}
+function themeChanged(){applyTheme()}
+applyTheme();
+matchMedia('(prefers-color-scheme: dark)').addEventListener('change',themeChanged);
+new MutationObserver(themeChanged).observe(document.documentElement,{attributes:true,attributeFilter:['data-theme']});
+if(matchMedia('(prefers-reduced-motion: reduce)').matches)playing=false;
+resize();
+const first=(location.hash||'').slice(1);
+select(EJ.some(e=>e.id===first)?first:'pautas',false);
+window.__dbg={setX:(v)=>{xray=v;draw()},select,draw,setT:(x)=>{t=x;playing=false;draw()},camera,controls,renderer,scene,J};
+frame();
+})();
+</script>
+</body></html>
