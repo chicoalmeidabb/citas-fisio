@@ -1,7 +1,7 @@
 /* Service worker: permite instalar la app y abrirla aunque falle la conexión.
    Los datos (hoja de Google) siempre se piden a internet; solo se guarda la propia aplicación. */
-const VERSION = 'citas-fisio-v2';
-const ARCHIVOS = ['./', 'index.html', 'piramidal.html', 'linfedema.html', 'three.min.js', 'OrbitControls.js', 'manifest.webmanifest', 'icon-192.png', 'icon-512.png', 'icon-maskable-512.png'];
+const VERSION = 'citas-fisio-v3';
+const ARCHIVOS = ['./', 'index.html', 'piramidal.html', 'linfedema.html', 'trocanterico.html', 'rectofemoral.html', 'three.min.js', 'OrbitControls.js', 'manifest.webmanifest', 'icon-192.png', 'icon-512.png', 'icon-maskable-512.png'];
 
 self.addEventListener('install', e => {
   e.waitUntil(
