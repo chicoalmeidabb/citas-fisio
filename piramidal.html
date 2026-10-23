@@ -389,9 +389,9 @@ const POSES={
      arm:{L:{t:{j:'kneeL',o:[-.03,.03,.04]},pole:[.8,.5,-.5]},R:{t:{j:'ankleL',o:[0,.0,.0]},pole:[-.4,.6,-.5]}}}},
  puente:{
   a:{root:supRoot,torso:0,leg:{R:{t:[-.1,.05,.47],pole:[0,1,.3],planta:PLANTA_SUPINO},L:{t:[.1,.05,.47],pole:[0,1,.3],planta:PLANTA_SUPINO}},
-     arm:{L:{fk:{f:0,a:14,k:0}},R:{fk:{f:0,a:14,k:0}}}},
+     arm:{L:{t:[.21,.04,.2],pole:[1,.2,0]},R:{t:[-.21,.04,.2],pole:[-1,.2,0]}}},
   b:{root:{p:[0,.31,-.04],r:[-110,0,0]},torso:0,neck:20,leg:{R:{t:[-.1,.05,.47],pole:[0,1,0],planta:PLANTA_SUPINO},L:{t:[.1,.05,.47],pole:[0,1,0],planta:PLANTA_SUPINO}},
-     arm:{L:{fk:{f:0,a:14,k:0}},R:{fk:{f:0,a:14,k:0}}}}},
+     arm:{L:{t:[.21,.04,.2],pole:[1,.2,0]},R:{t:[-.21,.04,.2],pole:[-1,.2,0]}}}},
  f4pie:{
   a:Object.assign({},STANDP,{torso:6,leg:{R:fkL(10,3,0,20),L:fkL(70,38,45,105)},arm:{L:fkL(70,8,0,12),R:fkL(70,8,0,12)}}),
   b:Object.assign({},STANDP,{torso:26,leg:{R:fkL(38,3,0,62),L:fkL(70,38,45,105)},arm:{L:fkL(78,8,0,12),R:fkL(78,8,0,12)}})},
