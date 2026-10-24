@@ -99,6 +99,7 @@ footer{font-size:13px;color:var(--mut);max-width:80ch}
 .share{display:flex;gap:8px;flex-wrap:wrap;margin-top:12px}.share .wa{background:#1f9d55;border-color:#1f9d55;color:#fff}.ctrl{flex-wrap:wrap}
 html{padding:env(safe-area-inset-top,0) 0 env(safe-area-inset-bottom,0)}body{margin:0}[hidden]{display:none!important}html.emb header h1{display:none}html.emb header p{margin-top:0}
 #realf{position:absolute;inset:0;width:100%;height:100%;border:0;background:#fff;z-index:3}#realmsg{position:absolute;inset:0;display:grid;place-items:center;text-align:center;padding:20px;background:#fff;color:#555;z-index:4;font-size:14px;pointer-events:none}.vsel{display:flex;gap:6px;flex-basis:100%;flex-wrap:wrap}.vsel .btn[aria-pressed=true]{background:var(--accent);border-color:var(--accent);color:var(--accent-ink)}
+.nm{display:flex;gap:6px;flex-wrap:wrap;margin-top:10px}.nm input{flex:1 1 200px;min-width:0;font:inherit;padding:8px 10px;border:1px solid var(--line);border-radius:8px;background:var(--surface);color:var(--ink)}
 </style>
 
 </head><body>
@@ -462,7 +463,7 @@ resize();
 /* ---------------- Enviar por WhatsApp ---------------- */
 const CLINICA='Centro de Fisioterapia · Carlos Ortiz';
 const AVISO='Para en cuanto notes dolor y, si no se te quita, consúltanos.';
-function enlaceEj(id){return location.href.split('#')[0].split('?')[0]+'?v='+vistaEf(id)+'#'+id}
+function enlaceEj(id){const e=EJ.find(x=>x.id===id);const n=e&&e.orig&&e.nombre!==e.orig?'&n='+encodeURIComponent(e.nombre):'';return location.href.split('#')[0].split('?')[0]+'?v='+vistaEf(id)+n+'#'+id}
 function textoEj(e,solo){
   let s='';
   if(solo)s+='*'+CLINICA+'*\n\n';
@@ -544,6 +545,31 @@ function updIll(){
     reFr.hidden=false;
   }else{reFr.hidden=true;reMsg.hidden=true;clearTimeout(reT);reId=null}
 }
+/* ---------------- Cambiar nombre de los ejercicios ---------------- */
+const NK='nomEj:'+(location.pathname.split('/').pop()||'x')+':';
+EJ.forEach(e=>{e.orig=e.nombre});
+function nmGet(id){try{return localStorage.getItem(NK+id)}catch(_){return null}}
+function nmSet(id,v){try{if(v)localStorage.setItem(NK+id,v);else localStorage.removeItem(NK+id)}catch(_){}}
+function nmApply(e,v){e.nombre=v||e.orig;const h=document.querySelector('.item[data-id="'+e.id+'"] h2');if(h)h.textContent=e.nombre;const c=document.querySelector('.chip[data-id="'+e.id+'"]');if(c)c.textContent=v?e.nombre:CORTO[e.id]}
+EJ.forEach(e=>{const v=nmGet(e.id);if(v)nmApply(e,v)});
+{const m=location.search.match(/[?&]n=([^&]*)/),h=(location.hash||'').slice(1);if(m&&h){const e=EJ.find(x=>x.id===h);if(e&&!e.fixed){try{nmApply(e,decodeURIComponent(m[1]))}catch(_){}}}}
+document.querySelectorAll('.item').forEach(it=>{
+  const e=EJ.find(x=>x.id===it.dataset.id);if(!e)return;
+  const body=it.querySelector('.body');const wrap=document.createElement('div');wrap.className='nm';
+  const b=document.createElement('button');b.type='button';b.className='btn';b.textContent='✏️ Cambiar nombre';wrap.appendChild(b);body.appendChild(wrap);
+  b.addEventListener('click',()=>{
+    wrap.innerHTML='';const inp=document.createElement('input');inp.type='text';inp.maxLength=60;inp.value=e.nombre;inp.setAttribute('aria-label','Nombre del ejercicio');
+    const ok=document.createElement('button');ok.type='button';ok.className='btn';ok.textContent='Guardar';
+    const rs=document.createElement('button');rs.type='button';rs.className='btn';rs.textContent='Restablecer';
+    const ca=document.createElement('button');ca.type='button';ca.className='btn';ca.textContent='Cancelar';
+    wrap.append(inp,ok,rs,ca);inp.focus();inp.select();
+    const fin=()=>{wrap.innerHTML='';wrap.appendChild(b)};
+    ok.addEventListener('click',()=>{const v=inp.value.trim();if(!v||v===e.orig){nmSet(e.id,'');nmApply(e,'')}else{nmSet(e.id,v);nmApply(e,v)}fin()});
+    rs.addEventListener('click',()=>{nmSet(e.id,'');nmApply(e,'');fin()});
+    ca.addEventListener('click',fin);
+    inp.addEventListener('keydown',ev=>{if(ev.key==='Enter')ok.click();if(ev.key==='Escape')fin()});
+  });
+});
 const first=(location.hash||'').slice(1);
 select(EJ.some(e=>e.id===first)?first:'anat',false);
 window.__dbg={setX:(v)=>{xray=v;draw()},select,draw,setT:(x)=>{t=x;playing=false;draw()},camera,controls,renderer,scene,J};
